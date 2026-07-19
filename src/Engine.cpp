@@ -10,33 +10,19 @@ void Engine::Init()
 {
     Logger::Set(&mLogger);
 
-    if(mConfig.mEnableWindow){
-        const char* windowName = "SimStuff";
-        mWindowManager.Init(windowName);
-        mUIManager.Init(mWindowManager.GetGLFWWindowPtr());
-        mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
-        mUIManager.SetToggleWindowModeCallback([this](int _mode){ mWindowManager.ToggleWindowMode(_mode); }
-    );
-
-        if(mConfig.mEnableInput){
-            // input (maybe in window manager or command class)
-        }
-
-        if(mConfig.mEnableRendere){
-            // renderer
-        }
-    }
+    const char* windowName = "SimStuff";
+    mWindowManager.Init(windowName);
+    mUIManager.Init(mWindowManager.GetGLFWWindowPtr());
+    mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
+    mUIManager.SetToggleWindowModeCallback([this](int _mode){ mWindowManager.ToggleWindowMode(_mode); });
+    mRenderer.Init();
 }
-
 
 void Engine::StartFrame()
 {   
-    if(mConfig.mEnableWindow){
-        mWindowManager.PollEvents();
-        mWindowManager.ClearGLBuffer();
-        mUIManager.UIStartFrame();
-    }
-    
+    mWindowManager.PollEvents();
+    mWindowManager.ClearGLBuffer();
+    mUIManager.UIStartFrame();
 }
 
 void Engine::Update(float _dt)
@@ -46,33 +32,24 @@ void Engine::Update(float _dt)
 
 void Engine::Render()
 {
+    mRenderer.Render();
     mUIManager.UIDraw();
 }
 
 void Engine::EndFrame()
 {
-    if(mConfig.mEnableWindow){
-        mUIManager.UIEndFrame();
-        mWindowManager.SwapBuffers();
-    }
+
+    mUIManager.UIEndFrame();
+    mWindowManager.SwapBuffers();
 }
 
 void Engine::Shutdown()
 {
     Logger::Set(nullptr);
 
-    if(mConfig.mEnableWindow){
-        mWindowManager.Shutdown();
-        mUIManager.Shutdown();
-        
-        if(mConfig.mEnableInput){
-            // input 
-        }
-
-        if(mConfig.mEnableRendere){
-            // renderer
-        }
-    }
+    mWindowManager.Shutdown();
+    mUIManager.Shutdown();
+    
 }
 
 void Engine::SetShouldRun(bool _b)

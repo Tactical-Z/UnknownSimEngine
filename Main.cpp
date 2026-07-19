@@ -8,6 +8,5 @@
 int main(int arg, char* args){
 
     Applicaiton App;
-    App.RunApp();
-    return 0;
+    return App.RunApp();
 };

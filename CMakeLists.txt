@@ -15,6 +15,8 @@ set(SOURCES
     src/WindowManager.cpp
     src/Renderer.cpp
     src/UIManager.cpp
+    src/Shader.cpp
+    src/Texture.cpp
 )
 
 set(HEADERS
@@ -28,6 +30,8 @@ set(HEADERS
     src/WindowManager.h
     src/Renderer.h
     src/UIManager.h
+    src/Shader.h
+    src/Texture.h   
 )
 
 add_executable(UnknownProject
@@ -40,6 +44,7 @@ find_package(OpenGL REQUIRED)
 target_include_directories(UnknownProject PRIVATE
     external/glad/include
     external/glm-1.0.3
+    external/stb_i
     src
 )
 
