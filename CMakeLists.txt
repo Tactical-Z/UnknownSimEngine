@@ -31,7 +31,8 @@ set(HEADERS
     src/Renderer.h
     src/UIManager.h
     src/Shader.h
-    src/Texture.h   
+    src/Texture.h
+    src/PathUtil.h
 )
 
 add_executable(UnknownProject
@@ -55,4 +56,10 @@ target_link_libraries(UnknownProject
     OpenGL::GL
     glfw
     imgui
+)
+
+target_compile_definitions(UnknownProject PRIVATE
+    ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/"
+    SHADER_DIR="${CMAKE_SOURCE_DIR}/shader_src/"
+    SRC_DIR="${CMAKE_SOURCE_DIR}/src/"
 )

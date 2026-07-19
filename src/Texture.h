@@ -18,6 +18,7 @@ public:
     std::string mPath; // project path to texture location
     TextureType mType;
 
+    Texture() = default;
 	Texture(const std::string& _path, TextureType _type = TextureType::TEXTURE_2D);
     Texture(const std::initializer_list<std::string> _paths, TextureType _type = TextureType::TEXTURE_CUBE_MAP);
 

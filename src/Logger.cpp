@@ -68,5 +68,5 @@ const char* Logger::LevelToColor(LogLevel _level)
 
 void Logger::Write(LogLevel _level, const std::string& _message){
 
-    std::cout << LevelToColor(_level) << LevelToStr(_level) << ThreadToStr(gCurrentThread) << _message << std::endl;
+    std::cout << LevelToColor(_level) << LevelToStr(_level) << ThreadToStr(gCurrentThread) << _message << LevelToColor(LogLevel::_DEFAULT_) << std::endl;
 }

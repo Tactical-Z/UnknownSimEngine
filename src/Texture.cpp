@@ -2,15 +2,16 @@
 #include <Texture.h>
 #include <Log.h>
 #include <glad/glad.h>
-#include <stb_image.h>
 #define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 
 Texture::Texture(const std::string& _path, TextureType _type) : mPath(_path), mType(_type)
 {	
     mID = LoadTexture(_path);
 }
 
-Texture::Texture(const std::initializer_list<std::string> _paths, TextureType _type = TextureType::TEXTURE_CUBE_MAP) : mType(_type)
+Texture::Texture(const std::initializer_list<std::string> _paths, TextureType _type) : mType(_type)
 {
     mID = GenSkybox(_paths);
 }
@@ -30,16 +31,16 @@ TextureID Texture::LoadTexture(const std::string& _path)
 	glBindTexture(GL_TEXTURE_2D, texID);
 
 	// Set texture wrapping/filtering options
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//glBindTexture(GL_TEXTURE_2D, texID);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// stbi init textures
 	int width, height, nrChannels;
@@ -53,6 +54,7 @@ TextureID Texture::LoadTexture(const std::string& _path)
 		else if (nrChannels == 4)
 			format = GL_RGBA;
 
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else

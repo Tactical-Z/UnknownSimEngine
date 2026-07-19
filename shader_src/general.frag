@@ -4,9 +4,9 @@ in vec2 uv;
 
 layout(location = 0) out vec4 color;
 
-uniform sampler2D renderedImage;
+uniform sampler2D textureSampler;
 
 void main()
 {
-    color = texture(renderedImage, uv);
+    color = texture(textureSampler, uv);
 }

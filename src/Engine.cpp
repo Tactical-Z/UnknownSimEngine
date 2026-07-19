@@ -16,6 +16,9 @@ void Engine::Init()
     mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
     mUIManager.SetToggleWindowModeCallback([this](int _mode){ mWindowManager.ToggleWindowMode(_mode); });
     mRenderer.Init();
+    
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 }
 
 void Engine::StartFrame()

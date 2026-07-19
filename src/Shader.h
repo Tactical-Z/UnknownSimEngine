@@ -10,7 +10,7 @@ public:
 
     // the program ID
     unsigned int ID;
-
+    Shader() = default;
     Shader(const std::string& _vertexPath, const std::string& _fragmentPath);
 
     // Setts this shader to be used for gl context.
