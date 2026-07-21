@@ -5,7 +5,8 @@
 
 Renderer::~Renderer(){
     delete mDisplayTexture;
-    delete mGeneralShader;
+    delete mVisShader;
+    delete mComputeShader;
 }
 
 void Renderer::Init()
@@ -17,11 +18,16 @@ void Renderer::Init()
 
 void Renderer::Render()
 {
+    // Compute Shader
+    mComputeShader->use();
+    glDispatchCompute((unsigned int)512, (unsigned int)512, 1);
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    // Render Shader
     glBindVertexArray(mVAO);
-    mGeneralShader->use();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, mDisplayTexture->mID);
-    mGeneralShader->setInt("textureSampler", 0);
+    mVisShader->use();
+    mDisplayTexture->use();
+    mVisShader->setInt("textureSampler", 0);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
@@ -33,7 +39,8 @@ void Renderer::InitBuffers()
 
 void Renderer::InitShaders()
 {
-    mGeneralShader = new Shader(PathUtil::shader_dir("general.vert"), PathUtil::shader_dir("general.frag"));
+    mVisShader = new VisShader(PathUtil::shader_dir("general.vert"), PathUtil::shader_dir("general.frag"));
+    mComputeShader = new ComputeShader(PathUtil::shader_dir("general.comp"));
 }
 
 void Renderer::InitTextures()

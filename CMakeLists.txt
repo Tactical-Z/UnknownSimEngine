@@ -16,7 +16,10 @@ set(SOURCES
     src/Renderer.cpp
     src/UIManager.cpp
     src/Shader.cpp
+    src/VisShader.cpp
+    src/ComputeShader.cpp
     src/Texture.cpp
+
 )
 
 set(HEADERS
@@ -31,6 +34,8 @@ set(HEADERS
     src/Renderer.h
     src/UIManager.h
     src/Shader.h
+    src/VisShader.h
+    src/ComputeShader.h
     src/Texture.h
     src/PathUtil.h
 )

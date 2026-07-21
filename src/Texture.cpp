@@ -5,6 +5,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+Texture::Texture(unsigned int _width, unsigned int _height, TextureType _type) : mPath(""), mType(_type)
+{	
+    mID = MakeBlankTexture(_width, _height);
+}
 
 Texture::Texture(const std::string& _path, TextureType _type) : mPath(_path), mType(_type)
 {	
@@ -20,6 +24,12 @@ Texture::~Texture()
 {
 	// deletes texture from gl memory
 	glDeleteTextures(1,&mID);
+}
+
+void Texture::use()
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mID);
 }
 
 TextureID Texture::LoadTexture(const std::string& _path)
@@ -62,6 +72,7 @@ TextureID Texture::LoadTexture(const std::string& _path)
 		LOG_ERROR("Texture Load Failed: %s", _path.c_str());
 	}
 	stbi_image_free(data);
+	glBindTexture(GL_TEXTURE_2D, 0);
     return texID;
 }
 
@@ -95,5 +106,25 @@ TextureID Texture::GenSkybox(std::initializer_list<std::string> _texturePaths)
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return texID;
+}
+
+TextureID Texture::MakeBlankTexture(unsigned int _width, unsigned int _height){
+	unsigned int texID;
+
+	glGenTextures(1, &texID);
+	glBindTexture(GL_TEXTURE_2D, texID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, _width, _height, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	
+	glBindImageTexture(0, texID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
 	return texID;
 }

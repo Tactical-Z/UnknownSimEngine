@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Shader.h"
+#include "VisShader.h"
+#include "ComputeShader.h"
 #include "Texture.h"
 
 class Renderer
@@ -11,8 +12,8 @@ public:
 
     unsigned int mVAO;
     Texture* mDisplayTexture = nullptr;
-    Shader* mGeneralShader = nullptr;
-
+    VisShader* mVisShader = nullptr;
+    ComputeShader* mComputeShader = nullptr;
     void Init();
     void Render();
 

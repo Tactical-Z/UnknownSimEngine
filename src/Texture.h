@@ -19,21 +19,22 @@ public:
     TextureType mType;
 
     Texture() = default;
+    Texture(unsigned int _width, unsigned int _height, TextureType _type = TextureType::TEXTURE_2D);
 	Texture(const std::string& _path, TextureType _type = TextureType::TEXTURE_2D);
     Texture(const std::initializer_list<std::string> _paths, TextureType _type = TextureType::TEXTURE_CUBE_MAP);
 
     // deconstructs object and gl texture reference
     ~Texture();
 
-
-    // Loads texture into GL using stbi_Image|
-    TextureID LoadTexture(const std::string& _path);
-    TextureID GenSkybox(std::initializer_list<std::string> _texturePaths);
+    void use();
 
 private:
     // ---------- Local functions --------------
 
-
+    // Loads texture into GL using stbi_Image|
+    TextureID LoadTexture(const std::string& _path);
+    TextureID GenSkybox(std::initializer_list<std::string> _texturePaths);
+    TextureID MakeBlankTexture(unsigned int _width, unsigned int _height);
 
 public:
 
