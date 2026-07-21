@@ -103,6 +103,8 @@ bool WindowManager::InitWindow()
 
     glfwSetFramebufferSizeCallback(mGLFWWindow, FramebufferResizeCallback);
 
+    glfwSwapInterval(0);
+
     return true;
 }
 

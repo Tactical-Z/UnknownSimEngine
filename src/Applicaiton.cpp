@@ -3,9 +3,12 @@
 #include "Engine.h"
 #include "EngineConfig.h"
 #include "ThreadManager.h"
+#include "TimeManager.h"
 #include "Log.h"
 
 int Applicaiton::RunApp(){
+
+    TimeManager::Init();
 
     EngineConfig config;
     config.mEnableWindow = true;
@@ -15,12 +18,19 @@ int Applicaiton::RunApp(){
     Engine engine(config);
     engine.Init();
 
+
+    LOG_DEBUG("Starting Timer");
+    TimeManager::StartTimer();
+
     while(engine.ShouldRun()){
+        TimeManager::Update();
         engine.StartFrame();
-        engine.Update(1.f);
+        engine.Update(TimeManager::GetDeltaTime());
         engine.Render();
         engine.EndFrame();
     }
+
+    LOG_DEBUG("Ending Timer: {}", TimeManager::EndTimer());
 
     // general approach:
     //// 1. Run compute shader

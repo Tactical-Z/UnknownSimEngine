@@ -27,6 +27,7 @@ public:
     ~Texture();
 
     void use();
+    void useCustomTex();
 
 private:
     // ---------- Local functions --------------

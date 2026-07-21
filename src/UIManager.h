@@ -6,7 +6,7 @@ class UIManager{
 public:
     using ExitCallback = std::function<void()>;
     using ToggleWindowModeCallback = std::function<void(int)>;
-    
+
     UIManager() = default;
     ~UIManager() = default;
 
@@ -15,9 +15,9 @@ public:
     void UIDraw();
     void UIEndFrame();
     void Shutdown();
+    void UpdateUI(float _dt);
 
 private:
-
     ExitCallback mExitCallback;
     ToggleWindowModeCallback mToggleWindowModeCallback;
     void InitImGui(struct GLFWwindow* _window);

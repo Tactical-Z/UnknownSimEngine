@@ -1,4 +1,5 @@
 #include "UIManager.h"
+#include "TimeManager.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -34,6 +35,11 @@ void UIManager::UIEndFrame()
 void UIManager::Shutdown()
 {
     ShutdownImGui();
+}
+
+void UIManager::UpdateUI(float _dt)
+{
+
 }
 
 void UIManager::InitImGui(GLFWwindow* _window)
@@ -106,6 +112,13 @@ void UIManager::UI_TopBar()
 
             ImGui::EndMenu();
         }
+
+        // FPS ---
+        char buffer[64];
+        snprintf(buffer, sizeof(buffer), "FPS: %.1f", TimeManager::GetFPS());
+        float textWidth = ImGui::CalcTextSize(buffer).x;
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - textWidth - ImGui::GetStyle().ItemSpacing.x);
+        ImGui::TextUnformatted(buffer);
 
         ImGui::EndMainMenuBar();
     }

@@ -11,6 +11,7 @@ public:
     unsigned int mId;
 
     Shader() = default;
+    ~Shader() = default;
 
     // Setts this shader to be used for gl context.
     void use() const;

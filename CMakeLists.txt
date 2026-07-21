@@ -19,7 +19,7 @@ set(SOURCES
     src/VisShader.cpp
     src/ComputeShader.cpp
     src/Texture.cpp
-
+    src/TimeManager.cpp
 )
 
 set(HEADERS
@@ -38,6 +38,7 @@ set(HEADERS
     src/ComputeShader.h
     src/Texture.h
     src/PathUtil.h
+    src/TimeManager.h
 )
 
 add_executable(UnknownProject

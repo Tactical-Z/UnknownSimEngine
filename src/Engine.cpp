@@ -30,7 +30,7 @@ void Engine::StartFrame()
 
 void Engine::Update(float _dt)
 {
-
+    mUIManager.UpdateUI(_dt);
 }
 
 void Engine::Render()

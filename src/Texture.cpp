@@ -30,6 +30,12 @@ void Texture::use()
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mID);
+	
+}
+
+void Texture::useCustomTex()
+{
+	glBindImageTexture(0, mID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 }
 
 TextureID Texture::LoadTexture(const std::string& _path)
@@ -116,14 +122,14 @@ TextureID Texture::MakeBlankTexture(unsigned int _width, unsigned int _height){
 
 	glGenTextures(1, &texID);
 	glBindTexture(GL_TEXTURE_2D, texID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, _width, _height, 0, GL_RGBA, GL_FLOAT, NULL);
-
+	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, _width, _height, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, _width, _height);
+	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	
-	glBindImageTexture(0, texID, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return texID;

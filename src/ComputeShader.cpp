@@ -36,7 +36,3 @@ ComputeShader::ComputeShader(const std::string& _computePath)
     glDeleteShader(compute);
 }
 
-void Shader::use() const
-{
-    glUseProgram(mId);
-}
