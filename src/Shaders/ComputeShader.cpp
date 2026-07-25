@@ -1,7 +1,7 @@
-#include "ComputeShader.h"
-
+#include "Shaders/ComputeShader.h"
+#include "Util/Log.h"
 #include <glad/glad.h>
-#include "Log.h"
+
 
 ComputeShader::ComputeShader(const std::string& _computePath)
 {

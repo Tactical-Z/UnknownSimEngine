@@ -1,12 +1,12 @@
 
-#include "Applicaiton.h"
-#include "Engine.h"
-#include "EngineConfig.h"
-#include "ThreadManager.h"
-#include "TimeManager.h"
-#include "Log.h"
+#include "Core/Application.h"
+#include "Core/Threading/ThreadManager.h"
+#include "Engine/Engine.h"
+#include "Engine/EngineConfig.h"
+#include "Util/TimeManager.h"
+#include "Util/Log.h"
 
-int Applicaiton::RunApp(){
+int Application::RunApp(){
 
     TimeManager::Init();
 
@@ -18,10 +18,6 @@ int Applicaiton::RunApp(){
     Engine engine(config);
     engine.Init();
 
-
-    LOG_DEBUG("Starting Timer");
-    TimeManager::StartTimer();
-
     while(engine.ShouldRun()){
         TimeManager::Update();
         engine.StartFrame();
@@ -29,8 +25,6 @@ int Applicaiton::RunApp(){
         engine.Render();
         engine.EndFrame();
     }
-
-    LOG_DEBUG("Ending Timer: {}", TimeManager::EndTimer());
 
     // general approach:
     //// 1. Run compute shader

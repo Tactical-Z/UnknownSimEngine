@@ -7,38 +7,42 @@ set(CMAKE_CXX_STANDARD 20)
 set(SOURCES
     main.cpp
     external/glad/src/glad.c
-    src/Applicaiton.cpp
-    src/Engine.cpp
-    src/Logger.cpp
-    src/ThreadManager.cpp
-    src/ThreadContext.cpp
-    src/WindowManager.cpp
-    src/Renderer.cpp
-    src/UIManager.cpp
-    src/Shader.cpp
-    src/VisShader.cpp
-    src/ComputeShader.cpp
-    src/Texture.cpp
-    src/TimeManager.cpp
+    src/Core/Application.cpp
+    src/Core/Threading/ThreadManager.cpp
+    src/Core/Threading/ThreadContext.cpp
+    src/Engine/Engine.cpp
+    src/Engine/Logger.cpp
+    src/Engine/WindowManager.cpp
+    src/Engine/Camera.cpp
+    src/Engine/Objects.cpp
+    src/Engine/Rendering/UIManager.cpp
+    src/Engine/Rendering/Renderer.cpp
+    src/Engine/Rendering/Texture.cpp
+    src/Shaders/Shader.cpp
+    src/Shaders/VisShader.cpp
+    src/Shaders/ComputeShader.cpp
+    src/Util/TimeManager.cpp
 )
 
 set(HEADERS
-    src/Applicaiton.h
-    src/Engine.h
-    src/EngineConfig.h
-    src/Logger.h
-    src/Log.h
-    src/ThreadManager.h
-    src/ThreadContext.h
-    src/WindowManager.h
-    src/Renderer.h
-    src/UIManager.h
-    src/Shader.h
-    src/VisShader.h
-    src/ComputeShader.h
-    src/Texture.h
-    src/PathUtil.h
-    src/TimeManager.h
+    src/Core/Application.h
+    src/Core/Threading/ThreadManager.h
+    src/Core/Threading/ThreadContext.h
+    src/Engine/Engine.h
+    src/Engine/EngineConfig.h
+    src/Engine/Logger.h
+    src/Engine/WindowManager.h
+    src/Engine/Camera.h
+    src/Engine/Objects.h
+    src/Engine/Rendering/UIManager.h
+    src/Engine/Rendering/Renderer.h
+    src/Engine/Rendering/Texture.h
+    src/Shaders/Shader.h
+    src/Shaders/VisShader.h
+    src/Shaders/ComputeShader.h
+    src/Util/TimeManager.h
+    src/Util/Log.h
+    src/Util/Path.h
 )
 
 add_executable(UnknownProject

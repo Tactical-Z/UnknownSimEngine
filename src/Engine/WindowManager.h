@@ -1,5 +1,7 @@
 #pragma once
 
+#include "glm/glm.hpp"
+
 struct WindowColor{
     float r = 0.f;
     float g = 0.f;
@@ -34,6 +36,8 @@ struct WindowSettings
 class WindowManager
 {
 public:
+    using UpdateWindowSizeCallback = std::function<void(glm::ivec2)>;
+
     WindowManager() = default;
     ~WindowManager() = default;
 
@@ -47,7 +51,7 @@ public:
     void ToggleWindowMode(int _mode);
   
 private:
-
+    UpdateWindowSizeCallback mUpdateWindowSizeCallback;
     struct GLFWwindow* mGLFWWindow = nullptr;
     WindowSettings mSettings;
 
@@ -62,4 +66,6 @@ public:
     GLFWwindow* GetGLFWWindowPtr();
     WindowSettings* GetWindowSettingsPtr();
     bool WindowShouldClose();
+    glm::ivec2 GetWindowSize();
+    void SetUpdateWindowSizeCallback(UpdateWindowSizeCallback _callback);
 };

@@ -1,6 +1,6 @@
 
-#include <Texture.h>
-#include <Log.h>
+#include "Texture.h"
+#include "Util/Log.h"
 #include <glad/glad.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -127,8 +127,8 @@ TextureID Texture::MakeBlankTexture(unsigned int _width, unsigned int _height){
 	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 

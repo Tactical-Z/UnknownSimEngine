@@ -1,5 +1,5 @@
-#include "TimeManager.h"
-#include "Log.h"
+#include "Util/TimeManager.h"
+#include "Util/Log.h"
 
 std::stack<std::chrono::high_resolution_clock::time_point> TimeManager::mTimerStack = {};
 std::chrono::high_resolution_clock::time_point TimeManager::mAppStartTime = std::chrono::high_resolution_clock::now();

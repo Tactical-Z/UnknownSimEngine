@@ -1,5 +1,5 @@
-#include <VisShader.h>
-#include <Log.h>
+#include <Shaders/VisShader.h>
+#include <Util/Log.h>
 
 #include <fstream>
 #include <sstream>

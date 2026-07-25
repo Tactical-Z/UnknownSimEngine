@@ -1,10 +1,12 @@
 #pragma once
 
-#include "EngineConfig.h"
-#include "Logger.h"
-#include "WindowManager.h"
-#include "Renderer.h"
-#include "UIManager.h"
+#include "Engine/EngineConfig.h"
+#include "Engine/Logger.h"
+#include "Engine/WindowManager.h"
+#include "Engine/Camera.h"
+#include "Engine/Objects.h"
+#include "Engine/Rendering/Renderer.h"
+#include "Engine/Rendering/UIManager.h"
 
 class Engine
 {
@@ -27,12 +29,12 @@ private:
     EngineConfig mConfig;
     Logger mLogger;
     Renderer mRenderer;
+    Camera mCamera;
     WindowManager mWindowManager;
     UIManager mUIManager;
-
+    std::vector<Object*> mObjects;
 public:
 
     void SetShouldRun(bool _b);
     bool ShouldRun();
-
 };

@@ -1,5 +1,5 @@
 #include "Logger.h"
-#include "ThreadContext.h"
+#include "Core/Threading/ThreadContext.h"
 
 
 void Logger::Set(Logger* _logger)

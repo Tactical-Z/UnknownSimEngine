@@ -1,5 +1,5 @@
 #include "WindowManager.h"
-#include "Log.h"
+#include "Util/Log.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -147,6 +147,9 @@ void WindowManager::SetFullscreen()
         mode->height,
         mode->refreshRate
     );
+    
+    if(mUpdateWindowSizeCallback)
+        mUpdateWindowSizeCallback(glm::ivec2(mSettings.mCurrentWidth, mSettings.mCurrentHeight));
 }
 
 void WindowManager::SetBoarderlessFullscreen()
@@ -171,6 +174,8 @@ void WindowManager::SetBoarderlessFullscreen()
         0
     );
 
+    if(mUpdateWindowSizeCallback)
+        mUpdateWindowSizeCallback(glm::ivec2(mSettings.mCurrentWidth, mSettings.mCurrentHeight));
 }
 
 void WindowManager::SetWindowed()
@@ -194,5 +199,20 @@ void WindowManager::SetWindowed()
         mSettings.mWindowedHeight,
         0
     );
+
+    if(mUpdateWindowSizeCallback)
+        mUpdateWindowSizeCallback(glm::ivec2(mSettings.mCurrentWidth, mSettings.mCurrentHeight));
 }
 
+glm::ivec2 WindowManager::GetWindowSize()
+{
+    return glm::ivec2(mSettings.mCurrentWidth, mSettings.mCurrentHeight);
+}
+
+void WindowManager::SetUpdateWindowSizeCallback(UpdateWindowSizeCallback _callback)
+{
+    mUpdateWindowSizeCallback = _callback;
+
+    if(mUpdateWindowSizeCallback) // done as initial sett
+        mUpdateWindowSizeCallback(glm::ivec2(mSettings.mCurrentWidth, mSettings.mCurrentHeight));
+}

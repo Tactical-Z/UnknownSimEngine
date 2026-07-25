@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Logger.h"
+#include "Engine/Logger.h"
 
 #define LOG_DEBUG(...) \
     Logger::Get().Log(LogLevel::_DEBUG_, __VA_ARGS__)

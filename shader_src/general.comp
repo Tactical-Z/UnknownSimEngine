@@ -1,18 +1,116 @@
 #version 450 core
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
 
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
 layout (location = 0) uniform float time;
 
-void main() {
-    vec4 value = vec4(0.0, 0.0, 0.0, 1.0);
-    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
-    float speed = 100;
-    float width = 1000;
+struct Camera{
+    vec3 position;
+    vec3 up;
+    vec3 right;
+    vec3 front;
+    float fov;
+};
 
-    value.x = mod(float(texelCoord.x) + time * speed, width) / (gl_NumWorkGroups.x);
-    value.y = float(texelCoord.y)/(gl_NumWorkGroups.y);
-    imageStore(imgOutput, texelCoord, value);
+struct Sphere{
+    vec3 position;
+    float radius;
+};
+
+uniform Camera camera;
+uniform Sphere sphere;
+
+bool PixelIsInput(vec2 _pixel, vec2 _position)
+{
+    return _pixel == _position;
 }
+
+ivec2 UVToPixel(vec2 _uv, ivec2 _imgSize)
+{
+    return ivec2(_uv * vec2(_imgSize - 1));
+}
+
+ivec2 GetTexelCoordinate()
+{
+    return ivec2(gl_GlobalInvocationID.xy);
+}
+
+bool RayIntersection(vec3 _rayPosition, Sphere _sphere)
+{
+    vec3 diff = _rayPosition - _sphere.position;
+    float distSquared = dot(diff,diff);
+    return distSquared <= (_sphere.radius * _sphere.radius);
+}
+
+void main() {
+    
+    vec4 color = vec4(0,0,0,1);
+    ivec2 texelCord = GetTexelCoordinate();
+    vec2 imgSize = imageSize(imgOutput);
+    //vec2 uv = vec2(texelCord) / vec2(imgSize);
+    vec2 uv = (vec2(texelCord) + 0.5) / imgSize;
+    if (texelCord.x >= imgSize.x ||
+        texelCord.y >= imgSize.y)
+    {
+        return;
+    }
+    
+    // camera ray
+    float scale = tan(radians(camera.fov) * 0.5);
+    float aspect = float(imgSize.x) / float(imgSize.y);
+    vec2 centredUV = ((uv * 2.0) - 1.0); // centred coordinates
+    centredUV *= scale; // apply fov
+    centredUV.x *= aspect; // apply aspect ratio to avoid streatching
+    //uv.y = -uv.y; // flip image
+
+    vec3 rayOrigin = camera.position;
+    vec3 rayDirection = normalize(camera.front + (centredUV.x * camera.right) + (centredUV.y * camera.up));
+    vec3 rayPosition = rayOrigin;
+    int numRayChecks = 200;
+    float stepSize = 0.01f;
+    vec4 colisionColor = vec4(1.0, 0.0, 0.0, 1.0);
+    for(int i = 0; i < numRayChecks; i++){
+        rayPosition += rayDirection * stepSize;
+        if(RayIntersection(rayPosition, sphere)){
+           
+            imageStore(imgOutput, texelCord, colisionColor);
+            return;
+        }
+    }
+
+    imageStore(imgOutput, texelCord, vec4(uv.x, uv.y, 0, 1));
+}
+
+// void main()
+// {
+//     vec4 color = vec4(0,0,0,1);
+//     ivec2 texelCord = GetTexelCoordinate();
+//     ivec2 imgSize = imageSize(imgOutput);
+
+//     vec2 uv = vec2(texelCord) / vec2(imgSize); 
+
+//     // vec2 BottomLeft = vec2(0);<
+//     // vec2 TopLeft = vec2(0,249);
+//     // vec2 BottomRight = vec2(499,0);
+//     // vec2 TopRight = vec2(499,499);
+//     // vec2 Centre = vec2(250,250);
+//     // if (PixelIsInput(texelCord, TopLeft))
+//     // {
+//     //    color = vec4(1.0, 0.0, 0.0, 1.0);
+//     // }
+
+//     vec2 BottomLeftUV = vec2(0);
+//     vec2 TopLeftUV = vec2(0,1);
+//     vec2 BottomRightUV = vec2(1,0);
+//     vec2 TopRightUV = vec2(1,1);
+//     vec2 CentreUV = vec2(0.5, 0.5);
+//     if (PixelIsInput(texelCord, UVToPixel(CentreUV, imgSize)))
+//     {
+//        color = vec4(1.0, 0.0, 0.0, 1.0);
+//     }
+
+
+//     imageStore(imgOutput, texelCord, color);
+// }
