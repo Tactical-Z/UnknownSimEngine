@@ -8,6 +8,18 @@
 
 namespace PathUtil
 {
+    inline std::vector<std::string> skybox_files(const std::string& path)
+    {
+        return {
+            path + "right.png",   // +X
+            path + "left.png",    // -X
+            path + "top.png",     // +Y
+            path + "bottom.png",  // -Y
+            path + "front.png",   // +Z
+            path + "back.png"     // -Z
+        };
+    }
+
     inline std::string project_dir(const std::string& path)
     {
         return (std::filesystem::path(PROJECT_SOURCE_DIR) / path).string();

@@ -3,11 +3,11 @@
 #include <chrono>
 #include <stack>
 
-class TimeManager{
+class STime{
 public:
 
-    TimeManager() = default;
-    ~TimeManager() = default;
+    STime() = default;
+    ~STime() = default;
 
     static void Init();
     static void Update();

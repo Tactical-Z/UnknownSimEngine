@@ -3,12 +3,12 @@
 #include "Core/Threading/ThreadManager.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineConfig.h"
-#include "Util/TimeManager.h"
+#include "Util/STime.h"
 #include "Util/Log.h"
 
 int Application::RunApp(){
 
-    TimeManager::Init();
+    STime::Init();
 
     EngineConfig config;
     config.mEnableWindow = true;
@@ -19,9 +19,9 @@ int Application::RunApp(){
     engine.Init();
 
     while(engine.ShouldRun()){
-        TimeManager::Update();
+        STime::Update();
         engine.StartFrame();
-        engine.Update(TimeManager::GetDeltaTime());
+        engine.Update(STime::GetDeltaTime());
         engine.Render();
         engine.EndFrame();
     }

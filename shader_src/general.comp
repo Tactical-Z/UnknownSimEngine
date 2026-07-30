@@ -1,10 +1,7 @@
 #version 450 core
+#define PI 3.14159265359
 
 layout (local_size_x = 10, local_size_y = 10, local_size_z = 1) in;
-
-layout (rgba32f, binding = 0) uniform image2D imgOutput;
-
-layout (location = 0) uniform float time;
 
 struct Camera{
     vec3 position;
@@ -12,12 +9,29 @@ struct Camera{
     vec3 right;
     vec3 front;
     float fov;
+    float maxRayLength;
+    int numRayChecks;
 };
 
 struct Sphere{
     vec3 position;
     float radius;
 };
+
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+};
+
+// Image binding
+layout (rgba32f, binding = 0) uniform image2D imgOutput;
+// Texture binding
+layout(binding = 0) uniform samplerCube skybox;
+// SSBO binding
+layout (std430, binding = 0) buffer particleBuffer {Particle particles[];};
+// Uniform binding
+//layout (location = 0) uniform float time;
 
 uniform Camera camera;
 uniform Sphere sphere;
@@ -37,6 +51,15 @@ ivec2 GetTexelCoordinate()
     return ivec2(gl_GlobalInvocationID.xy);
 }
 
+bool IsInsideWindow(vec2 _imageSize, ivec2 _texelCord){
+    if (_texelCord.x >= _imageSize.x ||
+        _texelCord.y >= _imageSize.y)
+    {
+        return true;
+    }
+    return false;
+}
+
 bool RayIntersection(vec3 _rayPosition, Sphere _sphere)
 {
     vec3 diff = _rayPosition - _sphere.position;
@@ -44,44 +67,67 @@ bool RayIntersection(vec3 _rayPosition, Sphere _sphere)
     return distSquared <= (_sphere.radius * _sphere.radius);
 }
 
-void main() {
-    
-    vec4 color = vec4(0,0,0,1);
-    ivec2 texelCord = GetTexelCoordinate();
-    vec2 imgSize = imageSize(imgOutput);
-    //vec2 uv = vec2(texelCord) / vec2(imgSize);
-    vec2 uv = (vec2(texelCord) + 0.5) / imgSize;
-    if (texelCord.x >= imgSize.x ||
-        texelCord.y >= imgSize.y)
-    {
-        return;
-    }
-    
-    // camera ray
-    float scale = tan(radians(camera.fov) * 0.5);
-    float aspect = float(imgSize.x) / float(imgSize.y);
-    vec2 centredUV = ((uv * 2.0) - 1.0); // centred coordinates
-    centredUV *= scale; // apply fov
-    centredUV.x *= aspect; // apply aspect ratio to avoid streatching
-    //uv.y = -uv.y; // flip image
+vec2 DirectionToUV(vec3 _dir)
+{
+    float u = atan(_dir.y, _dir.x) / (2.0 * PI) + 0.5;
+    float v = asin(_dir.z) / PI + 0.5;
 
-    vec3 rayOrigin = camera.position;
-    vec3 rayDirection = normalize(camera.front + (centredUV.x * camera.right) + (centredUV.y * camera.up));
-    vec3 rayPosition = rayOrigin;
-    int numRayChecks = 200;
-    float stepSize = 0.01f;
-    vec4 colisionColor = vec4(1.0, 0.0, 0.0, 1.0);
-    for(int i = 0; i < numRayChecks; i++){
+    return vec2(u, v);
+}
+
+void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
+{
+    vec4 colisionColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // Ray Direction
+    vec2 centredUV = ((_uv * 2.0) - 1.0); // centred coordinates
+    float fov = tan(radians(_camera.fov) * 0.5);
+    centredUV *= fov; // apply fov
+    float aspect = _imageSize.x / _imageSize.y;
+    centredUV.x *= aspect; // apply aspect ratio to avoid streatching
+    vec3 rayDirection = normalize(_camera.front + (centredUV.x * _camera.right) + (centredUV.y * _camera.up));
+
+    // Ray propagation
+    vec3 rayPosition = _camera.position;
+    float stepSize = _camera.maxRayLength / _camera.numRayChecks;
+   
+    for(int i = 0; i < _camera.numRayChecks; i++){
         rayPosition += rayDirection * stepSize;
+
         if(RayIntersection(rayPosition, sphere)){
            
-            imageStore(imgOutput, texelCord, colisionColor);
-            return;
+           imageStore(imgOutput, _texelCord, colisionColor);
+           return;
+        }
+
+        for(int i = 0; i < particles.length(); i++){
+            Sphere particleSphere;
+            particleSphere.position = particles[i].position; 
+            particleSphere.radius = particles[i].radius;
+        
+            if(RayIntersection(rayPosition, particleSphere)){
+
+                imageStore(imgOutput, _texelCord, colisionColor);
+                return;
+            }
         }
     }
-
-    imageStore(imgOutput, texelCord, vec4(uv.x, uv.y, 0, 1));
+    
+    vec3 skyColour = texture(skybox, rayDirection).rgb;
+    imageStore(imgOutput, _texelCord, vec4(skyColour, 1.0));
 }
+
+void main() {
+    
+    vec2 imgSize = imageSize(imgOutput);
+    ivec2 texelCord = GetTexelCoordinate();
+    vec2 uv = (vec2(texelCord) + 0.5) / imgSize;
+
+    if(IsInsideWindow(imgSize, texelCord)) return;
+
+    Raytrace(camera, imgSize, texelCord, uv);
+}
+
 
 // void main()
 // {

@@ -12,12 +12,12 @@ const glm::vec3 Object::GetPosition() const
 }
 
 BlackHole::BlackHole(glm::vec3 _position, float _radius)
-: Object(_position), mRadius(_radius)
+: Object(_position), mSchwarzschildRadius(_radius)
 {
 
 }
 
 const float BlackHole::GetRadius() const
 {
-    return mRadius;
+    return mSchwarzschildRadius;
 }

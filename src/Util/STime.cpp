@@ -1,30 +1,30 @@
-#include "Util/TimeManager.h"
+#include "Util/STime.h"
 #include "Util/Log.h"
 
-std::stack<std::chrono::high_resolution_clock::time_point> TimeManager::mTimerStack = {};
-std::chrono::high_resolution_clock::time_point TimeManager::mAppStartTime = std::chrono::high_resolution_clock::now();
-std::chrono::high_resolution_clock::time_point TimeManager::mLastFrameTime = std::chrono::high_resolution_clock::now();
-float TimeManager::mDeltaTime = 0.0f;
-float TimeManager::mFpsUpdateInterval = 0.5f;
-float TimeManager::mFPS = 0.0f;
-float TimeManager::mFPSTimer = 0.0f;
+std::stack<std::chrono::high_resolution_clock::time_point> STime::mTimerStack = {};
+std::chrono::high_resolution_clock::time_point STime::mAppStartTime = std::chrono::high_resolution_clock::now();
+std::chrono::high_resolution_clock::time_point STime::mLastFrameTime = std::chrono::high_resolution_clock::now();
+float STime::mDeltaTime = 0.0f;
+float STime::mFpsUpdateInterval = 0.5f;
+float STime::mFPS = 0.0f;
+float STime::mFPSTimer = 0.0f;
 
-void TimeManager::Init()
+void STime::Init()
 {
 
 }
 
-void TimeManager::Update(){
+void STime::Update(){
     UpdateDeltaTime();
     UpdateFPS();
 }
 
-void TimeManager::StartTimer()
+void STime::StartTimer()
 {
     mTimerStack.push(std::chrono::high_resolution_clock::now());
 }
 
-float TimeManager::EndTimer()
+float STime::EndTimer()
 {
     if(mTimerStack.empty()){
         LOG_WARNING("No timers pending");
@@ -40,7 +40,7 @@ float TimeManager::EndTimer()
     return duration;
 }
 
-void TimeManager::UpdateDeltaTime(){
+void STime::UpdateDeltaTime(){
     
     auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -49,7 +49,7 @@ void TimeManager::UpdateDeltaTime(){
     mLastFrameTime = currentTime;
 }
 
-void TimeManager::UpdateFPS()
+void STime::UpdateFPS()
 {
     mFPSTimer += mDeltaTime;
     if (mFPSTimer >= mFpsUpdateInterval)
@@ -59,17 +59,17 @@ void TimeManager::UpdateFPS()
     }
 }
 
-float TimeManager::GetDeltaTime()
+float STime::GetDeltaTime()
 {
     return mDeltaTime;
 }
 
-float TimeManager::GetFPS()
+float STime::GetFPS()
 {
     return mFPS;
 }
 
-float TimeManager::GetTimeSinceAppStart()
+float STime::GetTimeSinceAppStart()
 {
     return std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - mAppStartTime).count();
 }

@@ -1,0 +1,23 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle{
+    vec3 position;
+    vec3 velocitydwa;
+};
+layout (std430, binding = 0)
+buffer particleBuffer {
+    Particle particles[];
+};
+
+int GetParticleIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+void main() {
+    int index = GetParticleIndex();
+    particles[index].position += (particles[index].position / 1000.f);
+}
+

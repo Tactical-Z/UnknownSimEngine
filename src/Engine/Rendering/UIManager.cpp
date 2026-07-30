@@ -1,5 +1,7 @@
 #include "UIManager.h"
-#include "Util/TimeManager.h"
+#include "Engine/Camera.h"
+#include "Util/STime.h"
+#include "Util/Log.h"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -24,6 +26,7 @@ void UIManager::UIDraw()
 {
     //ImGui::ShowDemoWindow();
     UI_TopBar();
+    UI_CameraWindow();
 }
 
 void UIManager::UIEndFrame()
@@ -69,6 +72,11 @@ void UIManager::ShutdownImGui()
     ImGui::DestroyContext();
 }
 
+void UIManager::ToggleBool(bool& _b)
+{
+    _b = !_b;
+}
+
 void UIManager::UI_TopBar()
 {
     if (ImGui::BeginMainMenuBar())
@@ -110,17 +118,73 @@ void UIManager::UI_TopBar()
                 ImGui::EndMenu();
             }
 
+            if (ImGui::MenuItem("CameraWindow"))
+            {
+                ToggleBool(mEnableCameraWindow);
+            }
+
             ImGui::EndMenu();
         }
 
         // FPS ---
         char buffer[64];
-        snprintf(buffer, sizeof(buffer), "FPS: %.1f", TimeManager::GetFPS());
+        snprintf(buffer, sizeof(buffer), "FPS: %.1f", STime::GetFPS());
         float textWidth = ImGui::CalcTextSize(buffer).x;
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - textWidth - ImGui::GetStyle().ItemSpacing.x);
         ImGui::TextUnformatted(buffer);
 
         ImGui::EndMainMenuBar();
+    }
+}
+
+void UIManager::UI_CameraWindow()
+{
+
+    if(!mEnableCameraWindow || !mGetCameraReferenceCallback) return;
+
+    Camera* cam = mGetCameraReferenceCallback();
+    if(cam){
+        if (ImGui::Begin("Camera")){
+            
+            //  --------- Position ---------
+
+            glm::vec3 currentPosition = cam->GetPosition();
+	        ImGui::Text("Position: ");
+	        ImGui::TextColored(ImVec4(1, 0, 0, 1), "X");
+	        ImGui::SameLine();
+	        ImGui::SetNextItemWidth(mItemWidth);
+	        ImGui::DragFloat("##PX", &currentPosition.x);
+	        ImGui::SameLine();
+	        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Y");
+	        ImGui::SameLine();
+	        ImGui::SetNextItemWidth(mItemWidth);
+	        ImGui::DragFloat("##PY", &currentPosition.y);
+	        ImGui::SameLine();
+	        ImGui::TextColored(ImVec4(0, 0, 1, 1), "Z");
+	        ImGui::SameLine();
+	        ImGui::SetNextItemWidth(mItemWidth);
+	        ImGui::DragFloat("##PZ", &currentPosition.z);
+	        cam->SetPosition(currentPosition);
+
+            //  --------- Rotation ---------
+            
+	        float currentPitch = cam->GetPitch();
+	        float currentYaw = cam->GetYaw();
+	        ImGui::Text("Rotation: ");
+	        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Pitch");
+	        ImGui::SameLine();
+	        ImGui::SetNextItemWidth(mItemWidth);
+	        ImGui::DragFloat("##RX", &currentPitch);
+                
+	        ImGui::SameLine();
+	        ImGui::TextColored(ImVec4(0, 1, 0, 1), "Yaw ");
+	        ImGui::SameLine();
+	        ImGui::SetNextItemWidth(mItemWidth);
+	        ImGui::DragFloat("##RY", &currentYaw);
+	        cam->SetRotationPY(currentPitch, currentYaw);
+
+            ImGui::End();
+        }
     }
 }
 
@@ -132,4 +196,10 @@ void UIManager::SetExitCallback(ExitCallback _callback)
 void UIManager::SetToggleWindowModeCallback(ToggleWindowModeCallback _callback)
 {
     mToggleWindowModeCallback = _callback;
+}
+
+void UIManager::SetGetCameraReferenceCallback(GetCameraReferenceCallback _callback)
+{
+    mGetCameraReferenceCallback = _callback;
 } 
+

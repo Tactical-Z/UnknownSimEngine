@@ -28,7 +28,7 @@ VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmen
     if (!success)
     {
         glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-        LOG_ERROR("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n {}", infoLog);
+        LOG_ERROR("Vertex Shader Compilation Failure, Error: {}, Path: {}", infoLog, _vertexPath);
     }
 
     // fragment Shader
@@ -40,7 +40,7 @@ VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmen
     if (!success)
     {
         glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-        LOG_ERROR("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n {}", infoLog);
+        LOG_ERROR("Fragment Shader Compilation Failure, Error: {}, Path: {}", infoLog, _fragmentPath);
     }
 
     // shader Program
@@ -53,7 +53,7 @@ VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmen
     if (!success)
     {
         glGetProgramInfoLog(mId, 512, NULL, infoLog);
-        LOG_ERROR("ERROR::SHADER::VIS::PROGRAM::LINKING_FAILED\n {}", infoLog);
+        LOG_ERROR("Render Shader Linking Failure, Error: {}", infoLog);
     }
 
     // delete the shaders as they're linked into our program now and no longer necessary
@@ -82,7 +82,7 @@ std::string Shader::ReadSorceCode(const std::string& _filePath)
     }
     catch (std::ifstream::failure e)
     {
-        LOG_ERROR("ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ");
+        LOG_ERROR("Faild to read path: {}", _filePath);
         return "";
     }
 

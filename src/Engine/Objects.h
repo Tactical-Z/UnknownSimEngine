@@ -16,6 +16,7 @@ public:
     const glm::vec3 GetPosition() const;
 };
 
+// black hole radius measured in Schwarzschild radius units
 class BlackHole : public Object
 {
 public:
@@ -24,7 +25,7 @@ public:
     ~BlackHole() = default;
 private:
 
-    float mRadius;
+    float mSchwarzschildRadius;
 
 public:
     const float GetRadius() const;

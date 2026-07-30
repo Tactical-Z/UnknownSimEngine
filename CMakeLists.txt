@@ -18,10 +18,14 @@ set(SOURCES
     src/Engine/Rendering/UIManager.cpp
     src/Engine/Rendering/Renderer.cpp
     src/Engine/Rendering/Texture.cpp
+    src/Engine/Simulation/SimulationManager.cpp
+    src/Engine/Simulation/Simulator.cpp
+    src/Engine/Simulation/AccretionSimulator.cpp
     src/Shaders/Shader.cpp
     src/Shaders/VisShader.cpp
     src/Shaders/ComputeShader.cpp
-    src/Util/TimeManager.cpp
+    src/Util/SMath.cpp
+    src/Util/STime.cpp
 )
 
 set(HEADERS
@@ -37,10 +41,16 @@ set(HEADERS
     src/Engine/Rendering/UIManager.h
     src/Engine/Rendering/Renderer.h
     src/Engine/Rendering/Texture.h
+    src/Engine/Simulation/SimulationManager.h
+    src/Engine/Simulation/Simulator.h
+    src/Engine/Simulation/AccretionSimulator.h
+    src/Engine/Simulation/ParticleData.h
+    src/Engine/Simulation/SimData.h
     src/Shaders/Shader.h
     src/Shaders/VisShader.h
     src/Shaders/ComputeShader.h
-    src/Util/TimeManager.h
+    src/Util/SMath.h
+    src/Util/STime.h
     src/Util/Log.h
     src/Util/Path.h
 )

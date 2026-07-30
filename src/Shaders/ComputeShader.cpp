@@ -5,7 +5,6 @@
 
 ComputeShader::ComputeShader(const std::string& _computePath)
 {
-
     std::string sourceCodeString = ReadSorceCode(_computePath);
     const char* sourceCode = sourceCodeString.c_str();
 
@@ -20,7 +19,7 @@ ComputeShader::ComputeShader(const std::string& _computePath)
     if (!success)
     {
         glGetShaderInfoLog(compute, 512, NULL, infoLog);
-        LOG_ERROR("ERROR::SHADER::COMPUTE::COMPILATION_FAILED\n {}", infoLog);
+        LOG_ERROR("Compute Shader Compilation Failure, Error: {}, Path: {}", infoLog, _computePath);
     }
 
     mId = glCreateProgram();
@@ -30,7 +29,7 @@ ComputeShader::ComputeShader(const std::string& _computePath)
     if (!success)
     {
         glGetProgramInfoLog(mId, 512, NULL, infoLog);
-        LOG_ERROR("ERROR::SHADER::COMPUTE::PROGRAM::LINKING_FAILED\n {}", infoLog);
+        LOG_ERROR("Compute Shader Link Failure, Error: {}", infoLog);
     }
 
     glDeleteShader(compute);

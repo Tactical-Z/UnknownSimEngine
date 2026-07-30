@@ -1,7 +1,12 @@
-#include "Renderer.h"
+#include "Engine/Rendering/Renderer.h"
 #include "Engine/Camera.h"
+#include "Shaders/ComputeShader.h"
+#include "Shaders/VisShader.h"
+#include "Engine/Rendering/Texture.h"
+#include "Engine/Camera.h"
+#include "Engine/Objects.h"
 
-#include "Util/TimeManager.h"
+#include "Util/STime.h"
 #include "Util/Path.h"
 #include "Util/Log.h"
 
@@ -10,6 +15,7 @@
 Renderer::~Renderer(){
     delete mDisplayTexture;
     delete mVisShader;
+    delete mSkyboxTexture;
     delete mComputeShader;
 }
 
@@ -17,27 +23,30 @@ void Renderer::Init()
 {
     InitBuffers();
     InitShaders();
+    InitTextures();
 }
 
-void Renderer::Render(const Camera& _camera, const std::vector<class Object*>& _objects)
+void Renderer::Render(const Camera* _camera, const std::vector<class Object*>& _objects)
 {
     if(!mDisplayTexture || !mVisShader || !mComputeShader)
         return;
 
+    
     // Compute Shader
+    mComputeShader->use();
     BindCamera(mComputeShader, _camera);
     BindObjects(mComputeShader, _objects);
-    mComputeShader->use();
+    BindTextures(mComputeShader);
+    BindSimulations(mComputeShader);
+    BindUniforms(mComputeShader);
 
-    mComputeShader->setFloat("time", TimeManager::GetTimeSinceAppStart());
-    mDisplayTexture->useCustomTex();
-    glDispatchCompute((unsigned int)mWindowSize.x/10, (unsigned int)mWindowSize.y/10, 1);
+    glDispatchCompute((unsigned int)mWindowSize.x / 10, (unsigned int)mWindowSize.y / 10, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     
     // Render Shader
     glBindVertexArray(mVAO);
     mVisShader->use();
-    mDisplayTexture->use();
+    mDisplayTexture->Bind(0, TextureType::TT_SAMPLER2D);
     mVisShader->setInt("textureSampler", 0);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
@@ -54,21 +63,29 @@ void Renderer::InitShaders()
     mComputeShader = new ComputeShader(PathUtil::shader_dir("general.comp"));
 }
 
-void Renderer::GenerateTexture()
+void Renderer::InitTextures()
+{
+    mSkyboxTexture = new Texture(PathUtil::skybox_files(PathUtil::asset_dir("skybox/blue/")));
+    GenerateDisplayTexture();
+}
+
+void Renderer::GenerateDisplayTexture()
 {
     delete mDisplayTexture;
     mDisplayTexture = nullptr;
     mDisplayTexture = new Texture(mWindowSize.x, mWindowSize.y);
 }
 
-void Renderer::BindCamera(const Shader* _shader, const Camera& _camera)
+void Renderer::BindCamera(const Shader* _shader, const Camera* _camera)
 {
     _shader->use();
-    _shader->setVec3("camera.position", _camera.GetPosition());
-    _shader->setVec3("camera.up", _camera.GetUp());
-    _shader->setVec3("camera.right", _camera.GetRight());
-    _shader->setVec3("camera.front", _camera.GetFront());
-    _shader->setFloat("camera.fov", _camera.GetFov());
+    _shader->setVec3("camera.position", _camera->GetPosition());
+    _shader->setVec3("camera.up", _camera->GetUp());
+    _shader->setVec3("camera.right", _camera->GetRight());
+    _shader->setVec3("camera.front", _camera->GetFront());
+    _shader->setFloat("camera.fov", _camera->GetFov());
+    _shader->setFloat("camera.maxRayLength", _camera->GetFarplane());
+    _shader->setInt("camera.numRayChecks", _camera->GetNumRayChecks());
 }
 
 void Renderer::BindObjects(const Shader* _shader, const std::vector<Object*>& _objects)
@@ -86,8 +103,35 @@ void Renderer::BindObjects(const Shader* _shader, const std::vector<Object*>& _o
     }
 }
 
+void Renderer::BindTextures(const class Shader* _shader)
+{
+    // ToDo: Upgrade all bindings to support different shader configurations, (vis vs compute)
+    _shader->use();
+    mDisplayTexture->Bind(0, TextureType::TT_IMAGE2D);
+    mSkyboxTexture->Bind(0, TextureType::TT_SAMPLERCUBE);
+    _shader->setInt("skybox", 0);
+}
+
+void Renderer::BindSimulations(const class Shader* _shader)
+{
+    if(mBindSimulationStorageBufferCallback)
+        mBindSimulationStorageBufferCallback(2);
+    else 
+        LOG_ERROR("Bind Simulation Buffer Callback invalid when called.");
+}
+
+void Renderer::BindUniforms(const class Shader* _shader)
+{
+    
+}
+
 void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){
     
     mWindowSize = _newWindowSize;
-    GenerateTexture();
+    GenerateDisplayTexture();
+}
+
+void Renderer::SetBindSimulationStorageBufferCallback(BindSimulationStorageBufferCallback _callback)
+{
+    mBindSimulationStorageBufferCallback = _callback;
 }

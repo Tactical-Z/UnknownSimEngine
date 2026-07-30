@@ -5,17 +5,19 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-Texture::Texture(unsigned int _width, unsigned int _height, TextureType _type) : mPath(""), mType(_type)
+Texture::Texture(unsigned int _width, unsigned int _height)
+	:	mPath("")
 {	
     mID = MakeBlankTexture(_width, _height);
 }
 
-Texture::Texture(const std::string& _path, TextureType _type) : mPath(_path), mType(_type)
+Texture::Texture(const std::string& _path)
+	:	mPath(_path)
 {	
     mID = LoadTexture(_path);
 }
 
-Texture::Texture(const std::initializer_list<std::string> _paths, TextureType _type) : mType(_type)
+Texture::Texture(const std::vector<std::string>& _paths)
 {
     mID = GenSkybox(_paths);
 }
@@ -26,16 +28,25 @@ Texture::~Texture()
 	glDeleteTextures(1,&mID);
 }
 
-void Texture::use()
+// ToDo: change from use to bind or something like that
+void Texture::Bind(int _location, TextureType _texType)
 {
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, mID);
-	
-}
-
-void Texture::useCustomTex()
-{
-	glBindImageTexture(0, mID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	switch (_texType)
+	{
+	case TextureType::TT_IMAGE2D:
+		glBindImageTexture(_location, mID, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+		break;
+	case TextureType::TT_SAMPLER2D:
+		glActiveTexture(GL_TEXTURE0 + _location);
+		glBindTexture(GL_TEXTURE_2D, mID);
+		break;
+	case TextureType::TT_SAMPLERCUBE:
+		glActiveTexture(GL_TEXTURE0 + _location);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, mID);
+		break;
+	default:
+		break;
+	}
 }
 
 TextureID Texture::LoadTexture(const std::string& _path)
@@ -75,14 +86,14 @@ TextureID Texture::LoadTexture(const std::string& _path)
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else
 	{
-		LOG_ERROR("Texture Load Failed: %s", _path.c_str());
+		LOG_ERROR("Texture Load Failed: {}", _path.c_str());
 	}
 	stbi_image_free(data);
 	glBindTexture(GL_TEXTURE_2D, 0);
     return texID;
 }
 
-TextureID Texture::GenSkybox(std::initializer_list<std::string> _texturePaths)
+TextureID Texture::GenSkybox(const std::vector<std::string>& _texturePaths)
 {
 	TextureID texID;
 	// init all textures and assign them to the correct channels
@@ -92,7 +103,7 @@ TextureID Texture::GenSkybox(std::initializer_list<std::string> _texturePaths)
 	stbi_set_flip_vertically_on_load(false);
 
 	int width, height, nrChannels, index{ 0 };
-	for (auto texturePath : _texturePaths)
+	for (std::string texturePath : _texturePaths)
 	{
 		unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
 		if (data)
@@ -103,7 +114,7 @@ TextureID Texture::GenSkybox(std::initializer_list<std::string> _texturePaths)
 		}
 		else
 		{
-			LOG_ERROR("Cubemap texture failed to load at location: %s", texturePath.c_str());
+			LOG_ERROR("Cubemap texture failed to load at location: {}", texturePath.c_str());
 		}
 		stbi_image_free(data);
 	}

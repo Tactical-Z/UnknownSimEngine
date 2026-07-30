@@ -2,13 +2,15 @@
 
 #include <memory> 
 #include <string>
+#include <vector>
 
 using TextureID = unsigned int;
 
 enum class TextureType
 {
-    TEXTURE_2D,
-    TEXTURE_CUBE_MAP
+    TT_IMAGE2D,
+    TT_SAMPLER2D,
+    TT_SAMPLERCUBE
 };
 
 class Texture
@@ -16,25 +18,23 @@ class Texture
 public:
     TextureID mID = { 0U }; // Texture id used by glfw
     std::string mPath; // project path to texture location
-    TextureType mType;
 
     Texture() = default;
-    Texture(unsigned int _width, unsigned int _height, TextureType _type = TextureType::TEXTURE_2D);
-	Texture(const std::string& _path, TextureType _type = TextureType::TEXTURE_2D);
-    Texture(const std::initializer_list<std::string> _paths, TextureType _type = TextureType::TEXTURE_CUBE_MAP);
+    Texture(unsigned int _width, unsigned int _height);
+	Texture(const std::string& _path);
+    Texture(const std::vector<std::string>& _paths);
 
     // deconstructs object and gl texture reference
     ~Texture();
 
-    void use();
-    void useCustomTex();
+    void Bind(int _location, TextureType _texType);
 
 private:
     // ---------- Local functions --------------
 
     // Loads texture into GL using stbi_Image|
     TextureID LoadTexture(const std::string& _path);
-    TextureID GenSkybox(std::initializer_list<std::string> _texturePaths);
+    TextureID GenSkybox(const std::vector<std::string>& _texturePaths);
     TextureID MakeBlankTexture(unsigned int _width, unsigned int _height);
 
 public:
