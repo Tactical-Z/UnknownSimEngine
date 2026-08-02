@@ -22,6 +22,7 @@ struct Particle{
     vec3 position;
     float radius;
     vec3 velocity;
+    float mass;
 };
 
 // Image binding
@@ -77,7 +78,8 @@ vec2 DirectionToUV(vec3 _dir)
 
 void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
 {
-    vec4 colisionColor = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 colisionColor1 = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 colisionColor2 = vec4(1.0, 0.0, 0.0, 1.0);
 
     // Ray Direction
     vec2 centredUV = ((_uv * 2.0) - 1.0); // centred coordinates
@@ -96,7 +98,7 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
 
         if(RayIntersection(rayPosition, sphere)){
            
-           imageStore(imgOutput, _texelCord, colisionColor);
+           imageStore(imgOutput, _texelCord, colisionColor1);
            return;
         }
 
@@ -106,8 +108,8 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
             particleSphere.radius = particles[i].radius;
         
             if(RayIntersection(rayPosition, particleSphere)){
-
-                imageStore(imgOutput, _texelCord, colisionColor);
+                
+                imageStore(imgOutput, _texelCord, colisionColor2);
                 return;
             }
         }

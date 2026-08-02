@@ -7,4 +7,5 @@ struct Particle{
     glm::vec3 mPosition;
     float mRadius;
     glm::vec3 mVelocity;
+    float mMass;
 };

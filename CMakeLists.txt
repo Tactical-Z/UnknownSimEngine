@@ -20,7 +20,6 @@ set(SOURCES
     src/Engine/Rendering/Texture.cpp
     src/Engine/Simulation/SimulationManager.cpp
     src/Engine/Simulation/Simulator.cpp
-    src/Engine/Simulation/AccretionSimulator.cpp
     src/Shaders/Shader.cpp
     src/Shaders/VisShader.cpp
     src/Shaders/ComputeShader.cpp
@@ -43,9 +42,9 @@ set(HEADERS
     src/Engine/Rendering/Texture.h
     src/Engine/Simulation/SimulationManager.h
     src/Engine/Simulation/Simulator.h
-    src/Engine/Simulation/AccretionSimulator.h
     src/Engine/Simulation/ParticleData.h
     src/Engine/Simulation/SimData.h
+    src/Engine/Simulation/HashGrid.h
     src/Shaders/Shader.h
     src/Shaders/VisShader.h
     src/Shaders/ComputeShader.h

@@ -18,7 +18,7 @@ private:
     glm::vec3 mRight = glm::vec3(0.0f, -1.0f, 0.0f);
     glm::vec3 mFront = glm::vec3(1.0f, 0.0f, 0.0f);
     float mFOV = 45.0f;
-    float mFarPlane = 50.f;
+    float mFarPlane = 100.f;
     int mNumRayChecks = 200;
 
     void UpdateDirectionVectors();

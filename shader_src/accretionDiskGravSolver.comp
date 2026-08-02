@@ -1,0 +1,50 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct RefObj{
+    vec3 position;
+    float radius;
+    float mass;
+};
+uniform RefObj refObj;
+
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+    float mass;
+};
+layout (std430, binding = 0)
+buffer particleBuffer {
+    Particle particles[];
+};
+
+uniform float dt;
+uniform int G;
+
+int GetParticleIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+vec3 GravitationalAcceleration(int _index)
+{
+    vec3 dir = refObj.position - particles[_index].position;
+    float dist = length(dir);
+
+    // F = G * ((m1 * m2) / r^2)   &    F = m1 * a   ->   a = G * (m2/r^2)
+    // Where dir is the direction of the acceleration (toward the reference object)
+    float acceleration = G * refObj.mass / (dist * dist);
+    return normalize(dir) * acceleration;
+}
+
+void main() {
+    int index = GetParticleIndex();
+
+    // Leapfrog integration for gravitational solving, much more consistant than explicit newtonian
+    particles[index].velocity += GravitationalAcceleration(index) * dt * 0.5;
+    particles[index].position += particles[index].velocity * dt;
+    particles[index].velocity += GravitationalAcceleration(index) * dt * 0.5;
+}
+

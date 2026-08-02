@@ -23,3 +23,19 @@ float SMath::RandomFloatByBounds(const glm::vec2& _bounds)
     std::uniform_real_distribution<float> distrib(_bounds.x, _bounds.y);
     return distrib(gen);
 }
+
+float SMath::MassFromSchwarzschildRadius(const float& _sRadius)
+{
+    // Schwarzschild radius equiation reordered for mass
+    return ((_sRadius * (C * C)) / (2 * G));
+}
+
+float SMath::OrbitalVelocity(const float& _orbitRadius, const float& _orbitBodyMass)
+{
+    return sqrt((G * _orbitBodyMass) / _orbitRadius);
+}
+
+float SMath::RadiusBetweenTwoPoints(const glm::vec3& _p1, const glm::vec3& _p2)
+{
+    return glm::distance(_p1, _p2);
+}

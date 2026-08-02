@@ -22,19 +22,27 @@ void Engine::Init()
 {
     Logger::Set(&mLogger);
 
-    const char* windowName = "SimStuff";
-    mCamera = new Camera(glm::vec3(-20,0,20), -45.f, 0.f);
+    // Objects
+    mCamera = new Camera(glm::vec3(-30,0,30), -45.f, 0.f);
     mObjects.push_back(new BlackHole(glm::vec3(0.0f, 0.0f, 0.0f), 2.0f));
+    // Window
+    const char* windowName = "Black Hole Simulation";
     mWindowManager.Init(windowName);
     mWindowManager.SetUpdateWindowSizeCallback([this](glm::ivec2 _size){ mRenderer.SetWindowSize(_size); });
+    // Simulation
+    mSimulationManager.Init(mObjects);
+    mSimulationManager.GenerateSimulation(SimulationType::ST_ACCRETIONDISK_GRAV);
+    mSimulationManager.GenerateSimulation(SimulationType::ST_SPACIAL_HASH_GRID);
+    mSimulationManager.GenerateSimulation(SimulationType::ST_ACCRETIONDISK_SPH);
+    // UI
     mUIManager.Init(mWindowManager.GetGLFWWindowPtr());
     mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
     mUIManager.SetToggleWindowModeCallback([this](int _mode){ mWindowManager.ToggleWindowMode(_mode); });
     mUIManager.SetGetCameraReferenceCallback([this](){ return mCamera; });
-    mSimulationManager.Init();
-    //mSimulationManager.GenerateSimulation(SimulationType::ST_ACCRETIONDISK, mObjects.front());
+    mUIManager.SetGetSimulationSpeedRefrenceCallback([this]() -> float& { return mSimulationManager.GetSimulationSpeedRef();});
+    // Renderer
     mRenderer.Init();
-    mRenderer.SetBindSimulationStorageBufferCallback([this](int _layout){ mSimulationManager.BindSimulationStorageBuffers(_layout); });
+    mRenderer.SetBindSimulationStorageBufferCallback([this](int _layout){ mSimulationManager.BindBuffer(_layout); });
     
 
 

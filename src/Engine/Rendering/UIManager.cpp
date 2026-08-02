@@ -27,6 +27,7 @@ void UIManager::UIDraw()
     //ImGui::ShowDemoWindow();
     UI_TopBar();
     UI_CameraWindow();
+    UI_WorldWindow();
 }
 
 void UIManager::UIEndFrame()
@@ -123,6 +124,11 @@ void UIManager::UI_TopBar()
                 ToggleBool(mEnableCameraWindow);
             }
 
+            if (ImGui::MenuItem("WorldWindow"))
+            {
+                ToggleBool(mEnableWorldWindow);
+            }
+
             ImGui::EndMenu();
         }
 
@@ -188,6 +194,45 @@ void UIManager::UI_CameraWindow()
     }
 }
 
+void UIManager::UI_WorldWindow()
+{
+    if(!mEnableWorldWindow) return;
+
+    if(ImGui::Begin("World")){
+
+        if(mGetSimulationSpeedRefrenceCallback){
+            float& simSpeed = mGetSimulationSpeedRefrenceCallback();
+            ImGui::Text("SimulationSpeed: ");
+            ImGui::SameLine();
+            ImGui::Text("%.2fx", simSpeed);
+            ImGui::SameLine();
+            if(simSpeed != 0){
+                if(ImGui::Button("||")){
+                    if(simSpeed != 0){
+                        mOriginalSimSpeed = simSpeed;
+                        simSpeed = 0.f;
+                    }
+                }
+            } else {
+                if(ImGui::Button("I>")){
+                    if(mOriginalSimSpeed == 0.f){
+                        simSpeed = 1.f;
+                    } else {
+                        simSpeed = mOriginalSimSpeed;
+                        mOriginalSimSpeed = 0.f;
+                    }
+
+                }
+            }
+            ImGui::DragFloat("##RY", &simSpeed, 0.1);
+        }        	
+	    
+
+        ImGui::End();
+    }
+
+}
+
 void UIManager::SetExitCallback(ExitCallback _callback)
 {
     mExitCallback = _callback;
@@ -203,3 +248,7 @@ void UIManager::SetGetCameraReferenceCallback(GetCameraReferenceCallback _callba
     mGetCameraReferenceCallback = _callback;
 } 
 
+void UIManager::SetGetSimulationSpeedRefrenceCallback(GetSimulationSpeedRefrenceCallback _callback)
+{
+    mGetSimulationSpeedRefrenceCallback = _callback;
+}

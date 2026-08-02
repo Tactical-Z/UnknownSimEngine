@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "Util/SMath.h"
 
 class Object
 {
@@ -26,7 +26,9 @@ public:
 private:
 
     float mSchwarzschildRadius;
+    float mMass;
 
 public:
     const float GetRadius() const;
+    const float GetMass() const;
 };
