@@ -19,7 +19,8 @@ set(SOURCES
     src/Engine/Rendering/Renderer.cpp
     src/Engine/Rendering/Texture.cpp
     src/Engine/Simulation/SimulationManager.cpp
-    src/Engine/Simulation/Simulator.cpp
+    src/Engine/Simulation/SimulationPipeline.cpp
+    src/Engine/Simulation/SimulationPass.cpp
     src/Shaders/Shader.cpp
     src/Shaders/VisShader.cpp
     src/Shaders/ComputeShader.cpp
@@ -41,7 +42,8 @@ set(HEADERS
     src/Engine/Rendering/Renderer.h
     src/Engine/Rendering/Texture.h
     src/Engine/Simulation/SimulationManager.h
-    src/Engine/Simulation/Simulator.h
+    src/Engine/Simulation/SimulationPipeline.h
+    src/Engine/Simulation/SimulationPass.h
     src/Engine/Simulation/ParticleData.h
     src/Engine/Simulation/SimData.h
     src/Engine/Simulation/HashGrid.h

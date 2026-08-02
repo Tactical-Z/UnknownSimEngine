@@ -1,7 +1,15 @@
 #pragma once
 
-enum class SimulationType{
-    ST_ACCRETIONDISK_SPH, // Smoothed Particle Hydrodynamics
-    ST_ACCRETIONDISK_GRAV, // Gravity
-    ST_SPACIAL_HASH_GRID
+#include <functional>
+#include <glad/glad.h>
+
+using UniformCallback = std::function<void(class Shader*)>;
+
+enum class BindingLocation{
+    BL_PARTICLE_BUFFER, 
+};
+
+struct SSBOBinding{
+    BindingLocation mLocation;
+    GLint mBufferID;
 };

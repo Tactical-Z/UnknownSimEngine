@@ -5,6 +5,7 @@
 
 ComputeShader::ComputeShader(const std::string& _computePath)
 {
+    mSrc = _computePath;
     std::string sourceCodeString = ReadSorceCode(_computePath);
     const char* sourceCode = sourceCodeString.c_str();
 

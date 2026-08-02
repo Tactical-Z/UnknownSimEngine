@@ -7,8 +7,8 @@
 class Shader
 {
 public:
-
     unsigned int mId;
+    std::string mSrc = "";
 
     Shader() = default;
     ~Shader() = default;
@@ -16,6 +16,7 @@ public:
     // Setts this shader to be used for gl context.
     void use() const;
 
+    std::string GetSrc();
 protected:
 
     std::string ReadSorceCode(const std::string& _filePath);

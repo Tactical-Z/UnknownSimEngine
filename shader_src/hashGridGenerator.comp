@@ -18,7 +18,23 @@ int GetParticleIndex()
     return int(gl_GlobalInvocationID.x);
 }
 
+uint Hash(ivec3 _c)
+{
+    const uint h1 = 798016u;
+    const uint h2 = 625481u;
+    const uint h3 = 321930u;
+    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hasing.
+    return _c.x * h1 ^_c.y * h2 ^_c.z * h3;
+}
+
 void main() {
-    
+    int id = GetParticleIndex();
+    //float cellSize = smoothingRadius;
+    //// 1. Hash particles
+    //particles[id].hash = Hash(particles[id].position/cellSize);
+
+    // 2. Sort by hash
+
+    // 3. build cell start / end
 }
 

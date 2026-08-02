@@ -36,6 +36,11 @@ void SimulationManager::Init(std::vector<class Object*>& _referenceObjects)
     }
 }
 
+void SimulationPass::GenerateSimulationSolver(std::string _solverSrcPath)
+{
+    mSimulationSolver = new ComputeShader(_solverSrcPath);
+}
+
 void SimulationManager::Update(float _dt)
 {
     BindBuffer(0);

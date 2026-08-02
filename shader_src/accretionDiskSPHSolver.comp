@@ -20,6 +20,5 @@ int GetParticleIndex()
 
 void main() {
     int index = GetParticleIndex();
-    //particles[index].position.y += (particles[index].position.y / 10000.f);
 }
 

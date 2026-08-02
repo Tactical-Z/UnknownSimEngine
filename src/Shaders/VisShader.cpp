@@ -7,7 +7,6 @@
 
 VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmentPath)
 {
-
     std::string vShaderCodeString = ReadSorceCode(_vertexPath);
     std::string fShaderCodeString = ReadSorceCode(_fragmentPath);
 
