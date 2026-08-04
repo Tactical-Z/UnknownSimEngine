@@ -1,20 +1,24 @@
 #pragma once
 
+#include <string>
 #include <vector>
+#include <utility>
 
 class SimulationPipeline{
 public:
     SimulationPipeline() = default;
+    SimulationPipeline(std::string _name);
     ~SimulationPipeline();
 
-    void ExecutePipeline(const uint32_t& _count);
+    void ExecutePipeline();
 
 private:
     std::vector<class SimulationPass*> mSimulationPasses;
-
+    std::string mName;
 public:
-    void AddPass(SimulationPass&& _pass);
-    SimulationPass* GetPass(const char* _s);
-    void DisablePass(const char* _s);
-    void EnablePass(const char* _s);
+    const char* GetName();
+    void AddPass(class SimulationPass* _pass);
+    const SimulationPass* GetPass(const char* _s);
+    void EnablePass(const char* _s, bool _b);
+    void GetUIData(std::vector<std::pair<const char*, float>>& _uiData);
 };

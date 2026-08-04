@@ -2,13 +2,6 @@
 
 layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
 
-struct RefObj{
-    vec3 position;
-    float radius;
-    float mass;
-};
-uniform RefObj refObj;
-
 struct Particle{
     vec3 position;
     float radius;
@@ -20,12 +13,24 @@ buffer particleBuffer {
     Particle particles[];
 };
 
+struct RefObj{
+    vec3 position;
+    float radius;
+    float mass;
+};
+uniform RefObj refObj;
 uniform float dt;
 uniform int G;
 
 int GetParticleIndex()
 {
     return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
 }
 
 vec3 GravitationalAcceleration(int _index)
@@ -40,11 +45,12 @@ vec3 GravitationalAcceleration(int _index)
 }
 
 void main() {
-    int index = GetParticleIndex();
-
+    int id = GetParticleIndex();
+    if(!WithinBounds(id, particles.length()))
+        return;
     // Leapfrog integration for gravitational solving, much more consistant than explicit newtonian
-    particles[index].velocity += GravitationalAcceleration(index) * dt * 0.5;
-    particles[index].position += particles[index].velocity * dt;
-    particles[index].velocity += GravitationalAcceleration(index) * dt * 0.5;
+    particles[id].velocity += GravitationalAcceleration(id) * dt * 0.5;
+    particles[id].position += particles[id].velocity * dt;
+    particles[id].velocity += GravitationalAcceleration(id) * dt * 0.5;
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <utility>
 
 class UIManager{
 public:
@@ -8,6 +9,7 @@ public:
     using ToggleWindowModeCallback = std::function<void(int)>;
     using GetCameraReferenceCallback = std::function<class Camera*()>;
     using GetSimulationSpeedRefrenceCallback = std::function<float&()>;
+    using GetPassTimeCallback = std::function<std::vector<std::pair<const char*, float>>()>;
 
     UIManager() = default;
     ~UIManager() = default;
@@ -24,10 +26,12 @@ private:
     ToggleWindowModeCallback mToggleWindowModeCallback;
     GetCameraReferenceCallback mGetCameraReferenceCallback;
     GetSimulationSpeedRefrenceCallback mGetSimulationSpeedRefrenceCallback;
+    GetPassTimeCallback mPassTimeCallback;
     const float mItemWidth = 60.f;
 
     bool mEnableCameraWindow = false;
-    bool mEnableWorldWindow = true;
+    bool mEnableWorldWindow = false;
+    bool mEnableSimulationWindow = true;
     float mOriginalSimSpeed = 0.f;
     
     void InitImGui(struct GLFWwindow* _window);
@@ -37,6 +41,7 @@ private:
     void UI_TopBar();
     void UI_CameraWindow();
     void UI_WorldWindow();
+    void UI_SimulationWindow();
 
 public:
 
@@ -44,4 +49,5 @@ public:
     void SetToggleWindowModeCallback(ToggleWindowModeCallback _callback);
     void SetGetCameraReferenceCallback(GetCameraReferenceCallback _callback);
     void SetGetSimulationSpeedRefrenceCallback(GetSimulationSpeedRefrenceCallback _callback);
+    void SetGetPassTimeCallback(GetPassTimeCallback _callback);
 };

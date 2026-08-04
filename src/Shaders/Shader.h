@@ -33,6 +33,11 @@ public:
         glUniform1i(glGetUniformLocation(mId, _name.c_str()), _value);
     }
 
+    void setUInt(const std::string& _name, int _value) const
+    {
+        glUniform1ui(glGetUniformLocation(mId, _name.c_str()), _value);
+    }
+
     void setFloat(const std::string& _name, float _value) const
     {
         glUniform1f(glGetUniformLocation(mId, _name.c_str()), _value);

@@ -1,28 +1,59 @@
 #include "Engine/Simulation/SimulationPass.h"
 #include "Shaders/ComputeShader.h"
 #include "Util/Path.h"
+#include "Util/Log.h"
 
-SimulationPass::SimulationPass(ComputeShader* _shader, uint32_t _dispachSize, std::vector<SSBOBinding> _resources, std::vector<UniformCallback> _uniforms)
-    :   mSovler(_shader), mDispachSize(_dispachSize), mResources(_resources), mUniforms(_uniforms)
+SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding> _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback> _uniforms, ExecuteCallback _execute)
+    :   mSolver(_shader), mResources(_resources), mDispatchCountCallback(_dispatchCountCallback), mUniforms(_uniforms), mExecuteCallback(_execute)
 {
-    mName = mSolver->GetSrc();
+    mName = PathUtil::GetFilenameWithoutExtension(mSolver->GetSrc());
+    GLint size[3];
+    glGetProgramiv(mSolver->mId, GL_COMPUTE_WORK_GROUP_SIZE, size);
+    mWorkGroupSize = size[0];
+
+    glGenQueries(1, &mTimeQuery);
 }
 
 SimulationPass::~SimulationPass()
 {
-    delete mSovler;
-    mSovler = nullptr;
+    glDeleteQueries(1, &mTimeQuery);
+    delete mSolver;
+    mSolver = nullptr;
 }
 
-void SimulationPass::Execute(const uint32_t& _count)
+void SimulationPass::Execute()
 {
-    if(!IsEnabled) return;
-
-    GLuint groups = ceil(_count / mDispachSize);
-    mSovler->use();
+    if(!mIsEnabled) return;
+    UpdateTimer();
+    
+    glBeginQuery(GL_TIME_ELAPSED, mTimeQuery);
+    uint32_t count = mDispatchCountCallback();
+    uint32_t groups = (count + mWorkGroupSize - 1) / mWorkGroupSize;
+    mSolver->use();
     BindResources();
     BindUniforms();
-    Dispach(groups);
+    if(mExecuteCallback){
+        mExecuteCallback(this, count, groups);
+    } else {
+        Dispatch(groups);
+    }   
+    glEndQuery(GL_TIME_ELAPSED);
+}
+
+void SimulationPass::UpdateTimer()
+{
+    GLuint available = 0;
+
+    glGetQueryObjectuiv(mTimeQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+
+    if(available)
+    {
+        GLuint64 time;
+
+        glGetQueryObjectui64v(mTimeQuery, GL_QUERY_RESULT, &time);
+
+        mGPUTimeMS = time / 1000000.0f;
+    }
 }
 
 void SimulationPass::BindResources()
@@ -40,11 +71,11 @@ void SimulationPass::BindUniforms()
 {
     for(UniformCallback uniform : mUniforms){
         if(uniform)
-            uniform(mSovler);
+            uniform(mSolver);
     }
 }
 
-void SimulationPass::Dispach(const GLuint& _groupSize)
+void SimulationPass::Dispatch(const GLuint& _groupSize)
 {
     glDispatchCompute(_groupSize, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -55,7 +86,21 @@ bool SimulationPass::IsEnabled()
     return mIsEnabled;
 }
 
-bool SimulationPass::SetIsEnabled(bool _b)
+void SimulationPass::SetIsEnabled(bool _b)
 {
     mIsEnabled = _b;
+}
+
+std::string& SimulationPass::GetName(){
+    return mName;
+}
+
+float SimulationPass::GetGPUTimeMS() const
+{
+    return mGPUTimeMS;
+} 
+
+ComputeShader* SimulationPass::GetShader()
+{
+    return mSolver;
 }

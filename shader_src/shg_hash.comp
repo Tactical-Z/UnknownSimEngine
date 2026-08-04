@@ -1,0 +1,63 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+    float mass;
+};
+layout (std430, binding = 0)
+buffer particleBuffer {
+    Particle particles[];
+};
+
+struct HashEntry{
+    uint hash;
+    uint particleIndex;
+};
+layout(std430, binding = 1)
+buffer hashBuffer {
+    HashEntry hashes[];
+};
+
+uniform int activeCount;
+uniform float cellSize;
+
+int GetParticleIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+uint Hash(ivec3 _c)
+{
+    const uint h1 = 798016u;
+    const uint h2 = 625481u;
+    const uint h3 = 321930u;
+    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hasing.
+    return uint(_c.x) * h1 ^ uint(_c.y) * h2 ^ uint(_c.z) * h3;
+}
+
+void main() {
+    int id = GetParticleIndex();
+    if(!WithinBounds(id, hashes.length()))
+        return;
+
+    if(id >= activeCount)
+    {
+        hashes[id].hash = 0xffffffff;
+        hashes[id].particleIndex = 0xffffffff;
+        return;
+    }
+
+    ivec3 cellCoordinates = ivec3(floor(particles[id].position / cellSize));
+    hashes[id].hash = //Hash(cellCoordinates);
+    hashes[id].particleIndex = id;
+}

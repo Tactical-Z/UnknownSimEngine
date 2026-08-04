@@ -40,7 +40,9 @@ void Renderer::Render(const Camera* _camera, const std::vector<class Object*>& _
     BindSimulations(mComputeShader);
     BindUniforms(mComputeShader);
 
-    glDispatchCompute((unsigned int)mWindowSize.x / 10, (unsigned int)mWindowSize.y / 10, 1);
+    GLuint groupsX = (mWindowSize.x + 9) / 10;
+    GLuint groupsY = (mWindowSize.y + 9) / 10;
+    glDispatchCompute(groupsX, groupsY, 1);
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     
     // Render Shader
@@ -114,8 +116,8 @@ void Renderer::BindTextures(const class Shader* _shader)
 
 void Renderer::BindSimulations(const class Shader* _shader)
 {
-    if(mBindSimulationStorageBufferCallback)
-        mBindSimulationStorageBufferCallback(2);
+    if(mBindParticleStorageBufferCallback)
+        mBindParticleStorageBufferCallback();
     else 
         LOG_ERROR("Bind Simulation Buffer Callback invalid when called.");
 }
@@ -131,7 +133,7 @@ void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){
     GenerateDisplayTexture();
 }
 
-void Renderer::SetBindSimulationStorageBufferCallback(BindSimulationStorageBufferCallback _callback)
+void Renderer::SetBindParticleStorageBufferCallback(BindParticleStorageBufferCallback _callback)
 {
-    mBindSimulationStorageBufferCallback = _callback;
+    mBindParticleStorageBufferCallback = _callback;
 }

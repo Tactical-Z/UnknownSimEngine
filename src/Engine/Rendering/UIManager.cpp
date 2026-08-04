@@ -28,6 +28,7 @@ void UIManager::UIDraw()
     UI_TopBar();
     UI_CameraWindow();
     UI_WorldWindow();
+    UI_SimulationWindow();
 }
 
 void UIManager::UIEndFrame()
@@ -119,14 +120,19 @@ void UIManager::UI_TopBar()
                 ImGui::EndMenu();
             }
 
-            if (ImGui::MenuItem("CameraWindow"))
+            if (ImGui::MenuItem("Camera Window"))
             {
                 ToggleBool(mEnableCameraWindow);
             }
 
-            if (ImGui::MenuItem("WorldWindow"))
+            if (ImGui::MenuItem("World Window"))
             {
                 ToggleBool(mEnableWorldWindow);
+            }
+
+            if (ImGui::MenuItem("Simulation Window"))
+            {
+                ToggleBool(mEnableSimulationWindow);
             }
 
             ImGui::EndMenu();
@@ -200,6 +206,20 @@ void UIManager::UI_WorldWindow()
 
     if(ImGui::Begin("World")){
 
+                	
+	    
+
+        ImGui::End();
+    }
+
+}
+
+void UIManager::UI_SimulationWindow()
+{
+    if(!mEnableSimulationWindow) return;
+
+    if(ImGui::Begin("Simulation")){
+
         if(mGetSimulationSpeedRefrenceCallback){
             float& simSpeed = mGetSimulationSpeedRefrenceCallback();
             ImGui::Text("SimulationSpeed: ");
@@ -225,12 +245,39 @@ void UIManager::UI_WorldWindow()
                 }
             }
             ImGui::DragFloat("##RY", &simSpeed, 0.1);
-        }        	
-	    
+        }
 
+        ImGui::Text("Simulation compute time");
+        std::vector<std::pair<const char*, float>> passTime = mPassTimeCallback();
+        bool firstPipeline = true;
+        for (const std::pair<const char*, float>& pass : passTime)
+        {
+            if (pass.second < 0.0f)
+            {
+                if (!firstPipeline)
+                    ImGui::Unindent();
+            
+                ImGui::Text("%s", pass.first);
+                ImGui::Indent();
+            
+                firstPipeline = false;
+            }
+            else
+            {
+                float frameTimeMS = STime::GetDeltaTime() * 1000.0f;
+                // frame percent should be done with more care, currently the measurements are in cpu time and happen asyncronosly
+                // that means we cannot compare cpu (dt frame time) with gpu opperation time.
+                //float framePercent = (pass.second / frameTimeMS) * 100.0f;
+                ImGui::Text("%s: %.2f ms", pass.first, pass.second/*, "(%.1f%%) frame time" framePercent*/);
+            }
+        }
+        
+        if (!firstPipeline)
+            ImGui::Unindent();
+
+        
         ImGui::End();
     }
-
 }
 
 void UIManager::SetExitCallback(ExitCallback _callback)
@@ -251,4 +298,9 @@ void UIManager::SetGetCameraReferenceCallback(GetCameraReferenceCallback _callba
 void UIManager::SetGetSimulationSpeedRefrenceCallback(GetSimulationSpeedRefrenceCallback _callback)
 {
     mGetSimulationSpeedRefrenceCallback = _callback;
+}
+
+void UIManager::SetGetPassTimeCallback(GetPassTimeCallback _callback)
+{
+    mPassTimeCallback = _callback;
 }

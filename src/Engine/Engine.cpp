@@ -31,19 +31,16 @@ void Engine::Init()
     mWindowManager.SetUpdateWindowSizeCallback([this](glm::ivec2 _size){ mRenderer.SetWindowSize(_size); });
     // Simulation
     mSimulationManager.Init(mObjects);
-    mSimulationManager.GenerateSimulation(SimulationType::ST_ACCRETIONDISK_GRAV);
-    mSimulationManager.GenerateSimulation(SimulationType::ST_SPACIAL_HASH_GRID);
-    mSimulationManager.GenerateSimulation(SimulationType::ST_ACCRETIONDISK_SPH);
     // UI
     mUIManager.Init(mWindowManager.GetGLFWWindowPtr());
     mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
     mUIManager.SetToggleWindowModeCallback([this](int _mode){ mWindowManager.ToggleWindowMode(_mode); });
     mUIManager.SetGetCameraReferenceCallback([this](){ return mCamera; });
     mUIManager.SetGetSimulationSpeedRefrenceCallback([this]() -> float& { return mSimulationManager.GetSimulationSpeedRef();});
+    mUIManager.SetGetPassTimeCallback([this]() -> std::vector<std::pair<const char*, float>> { return mSimulationManager.GetSimulationUIData();});
     // Renderer
     mRenderer.Init();
-    mRenderer.SetBindSimulationStorageBufferCallback([this](int _layout){ mSimulationManager.BindBuffer(_layout); });
-    
+    mRenderer.SetBindParticleStorageBufferCallback([this](){ mSimulationManager.BindParticleBuffer(); });
 
 
     glDisable(GL_DEPTH_TEST);

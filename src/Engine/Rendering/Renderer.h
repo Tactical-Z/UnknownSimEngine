@@ -6,7 +6,7 @@
 class Renderer
 {
 public:
-    using BindSimulationStorageBufferCallback = std::function<void(int)>;
+    using BindParticleStorageBufferCallback = std::function<void()>;
 
     Renderer() = default;
     ~Renderer();
@@ -21,7 +21,7 @@ public:
     void Render(const class Camera* _camera, const std::vector<class Object*>& _objects);
 
 private:
-    BindSimulationStorageBufferCallback mBindSimulationStorageBufferCallback;
+    BindParticleStorageBufferCallback mBindParticleStorageBufferCallback;
 
     void InitBuffers();
     void InitShaders();
@@ -35,5 +35,5 @@ private:
 public:
 
     void SetWindowSize(glm::ivec2 _newWindowSize);
-    void SetBindSimulationStorageBufferCallback(BindSimulationStorageBufferCallback _callback);
+    void SetBindParticleStorageBufferCallback(BindParticleStorageBufferCallback _callback);
 };

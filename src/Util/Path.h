@@ -8,6 +8,16 @@
 
 namespace PathUtil
 {
+    inline std::string GetFilename(const std::string& path)
+    {
+        return std::filesystem::path(path).filename().string();
+    }
+
+    inline std::string GetFilenameWithoutExtension(const std::string& path)
+    {
+        return std::filesystem::path(path).stem().string();
+    }
+
     inline std::vector<std::string> skybox_files(const std::string& path)
     {
         return {

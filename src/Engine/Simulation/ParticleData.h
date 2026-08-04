@@ -2,7 +2,7 @@
 
 #include "glm/glm.hpp"
 
-#define NUM_PARTICLE_MAX 10
+#define NUM_PARTICLE_MAX 20
 struct Particle{
     glm::vec3 mPosition;
     float mRadius;

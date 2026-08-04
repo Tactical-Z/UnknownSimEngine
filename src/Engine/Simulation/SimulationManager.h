@@ -2,78 +2,67 @@
 
 #include "Engine/Simulation/SimData.h"
 #include "Engine/Simulation/ParticleData.h"
-#include <glad/glad.h>
-#include <vector>
-#include <array>
-#include <functional>
-
-
+#include "Engine/Simulation/HashGridData.h"
+#include <utility>
 
 class SimulationManager{
 public:
     SimulationManager() = default;
     ~SimulationManager();
 
-    void Init(std::vector<class Object*>& _referenceObjects);
+    void Init(const std::vector<class Object*>& _referenceObjects);
     void Update(float _dt);
-    void GenerateSimulation(SimulationType _simType);
-    void BindSimulationStorageBuffers(int _layout);
-    void BindBuffer(int _layout);
 
+    void BindBuffer(GLint _bufferID, int _layout);
+    void BindParticleBuffer();
 private:
-    std::vector<class Simulator*> mSimulators;
+    // GPU buffers
+    GPUBuffer<Particle> mParticleBuffer;
+    GPUBuffer<HashEntry> mHashBuffer;
+    GPUBuffer<uint32_t> mCellStartBuffer;
+    GPUBuffer<uint32_t> mCellEndBuffer;
+    //GLuint mParticleBuffer;
+    //GLuint mHashBuffer;
+    //GLuint mCellStartBuffer;
+    //GLuint mCellEndBuffer;
+
+    void InitBuffers();
+
+    // Simulation
+    std::vector<class SimulationPipeline*> mPipelines;
     float mSimulationSpeed = 1.0f;
 
-    bool mParticleIsGenerated = false;
-    std::array<Particle, NUM_PARTICLE_MAX> mParticles;
-    glm::vec2 mRadiusSpawnBounds = glm::vec2(1, 20); // Schwarzschild radius
+    // Simulation Data
+    //std::array<Particle, NUM_PARTICLE_MAX> mParticles;
     float mParticleRadius = 0.5f;
-    std::vector<class Object*>* mReferenceObjectsRef;
-
-    GLuint mParticleBufferID = 0;
-    void GenerateSSBO(GLuint& _bufferId);
-    template<typename T>
-    void UploadSSBOData(T* _data, size_t _dataSize)
-    {
-        //glNamedBufferData(
-        //    mParticleBufferID,
-        //    _dataSize,
-        //    _data,
-        //    GL_DYNAMIC_DRAW
-        //);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, mParticleBufferID);
-
-        glBufferData(
-            GL_SHADER_STORAGE_BUFFER,
-            _dataSize,
-            _data,
-            GL_DYNAMIC_DRAW
-        );
+    glm::vec2 mRadiusSpawnBounds = glm::vec2(1, 20); // Schwarzschild radius
     
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-    }
+    void GenerateAccretionDiskParticles();
 
-    void BindCallbacksToFunctions();
-    using DTCallback = std::function<void(class Shader*)>;
-    DTCallback mDTCallback;
+    // Reference data
+    const std::vector<class Object*>* mReferenceObjectsRef;
+
+    // ---------------------------------------------------
+
+    // Pipeline Creation
+    void CreateGravityPipeline();
+    void CreateSHGPipeline();
+    void CreateSPHPipeline();
+
+    // Binding functions for callback
     void BindDTCallback(class Shader* _shader);
-    using CCallback = std::function<void(class Shader*)>;
-    CCallback mCCallback;
     void BindCCallback(class Shader* _shader);
-    using GCallback = std::function<void(class Shader*)>;
-    GCallback mGCallback;
     void BindGCallback(class Shader* _shader);
-    using SCallback = std::function<void(class Shader*)>;
-    SCallback mSCallback;
     void BindSCallback(class Shader* _shader);
-    using RefObjCallback = std::function<void(class Shader*)>;
-    RefObjCallback mRefObjCallback;
-    void BindRefObjCallback(class Shader* _shader);
+    void BindActiveCountCallback(class Shader* _shader);
+    void BindRefObjCallback(class Shader* _shader);  
+    void BindSHGCellSizeCallback(class Shader* _shader);
 
-    void InitParticlesAccretionDisk(const class BlackHole* _referenceObject);
-    class BlackHole* GetBlackHoleRefObject();
+    void BindCustomExecuet_BitonicSort(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
 
 public:
+
+    class BlackHole* GetBlackHoleRefObject();
     float& GetSimulationSpeedRef();
+    std::vector<std::pair<const char*, float>> GetSimulationUIData();
 };
