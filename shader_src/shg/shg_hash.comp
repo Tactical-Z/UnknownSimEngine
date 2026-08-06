@@ -38,9 +38,9 @@ bool WithinBounds(int _id, int _count){
 
 uint Hash(ivec3 _c)
 {
-    const uint h1 = 798016u;
-    const uint h2 = 625481u;
-    const uint h3 = 321930u;
+    const uint h1 = 79801u;
+    const uint h2 = 62548u;
+    const uint h3 = 32193u;
     // XOR ^ mixes the bits togeather better than with addition or othewise, good for hasing.
     return uint(_c.x) * h1 ^ uint(_c.y) * h2 ^ uint(_c.z) * h3;
 }
@@ -58,6 +58,6 @@ void main() {
     }
 
     ivec3 cellCoordinates = ivec3(floor(particles[id].position / cellSize));
-    hashes[id].hash = //Hash(cellCoordinates);
+    hashes[id].hash = Hash(cellCoordinates);
     hashes[id].particleIndex = id;
 }

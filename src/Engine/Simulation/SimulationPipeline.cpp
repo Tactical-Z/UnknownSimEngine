@@ -38,6 +38,7 @@ const SimulationPass* SimulationPipeline::GetPass(const char* _s)
         if(pass->GetName() == _s)
             return pass;
     }
+    return nullptr;
 }
 
 void SimulationPipeline::EnablePass(const char* _s, bool _b)

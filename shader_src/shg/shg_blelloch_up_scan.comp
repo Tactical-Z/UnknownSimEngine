@@ -1,0 +1,31 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 7)
+buffer cellPrefixBuffer {
+    uint cellScan[];
+};
+
+uniform int stride;
+
+int GetIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+void main() {
+    
+    int id = GetIndex();
+    int index = (id + 1) * stride * 2 - 1;
+    if(!WithinBounds(index, cellScan.length()))
+        return;
+
+    cellScan[index] += cellScan[index - stride];
+}

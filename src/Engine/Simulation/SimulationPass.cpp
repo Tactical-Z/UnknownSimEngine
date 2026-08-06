@@ -104,3 +104,8 @@ ComputeShader* SimulationPass::GetShader()
 {
     return mSolver;
 }
+
+uint32_t SimulationPass::GetWorkGroupSize()
+{
+    return mWorkGroupSize;
+}

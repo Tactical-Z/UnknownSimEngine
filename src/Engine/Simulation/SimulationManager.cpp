@@ -43,6 +43,52 @@ void SimulationManager::Update(float _dt)
     for(SimulationPipeline* pipline : mPipelines){
         pipline->ExecutePipeline();
     }
+
+    LOG_WARNING("Hashes: ");
+    auto hashes = ReadBuffer(mHashBuffer);
+    for(uint32_t i = 0; i < hashes.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, Hash: {}, particleIndex: {}", i, hashes[i].hash,hashes[i].particleIndex);
+    }
+
+    LOG_WARNING("Flag buffer: ");
+    auto flag = ReadBuffer(mCellFlagBuffer);
+    for(uint32_t i = 0; i < flag.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, flag: {}", i, flag[i]);
+    }
+
+    LOG_WARNING("Prefix buffer: ");
+    auto prefix = ReadBuffer(mCellPrefixBuffer);
+    for(uint32_t i = 0; i < prefix.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, prefix: {}", i, prefix[i]);
+    }
+
+    LOG_WARNING("CellStart: ");
+    auto cellStart = ReadBuffer(mCellStartBuffer);
+    for(uint32_t i = 0; i < cellStart.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, cellStart: {}", i, cellStart[i]);
+    }
+
+    LOG_WARNING("Cell End: ");
+    auto cellEnd = ReadBuffer(mCellEndBuffer);
+    for(uint32_t i = 0; i < cellEnd.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, cellEnd: {}", i, cellEnd[i]);
+    }
+
+    LOG_WARNING("Unique Hashes: ");
+    auto uniqeHash = ReadBuffer(mUniqueHashBuffer);
+    for(uint32_t i = 0; i < uniqeHash.size(); i++)
+    {
+        LOG_DEBUG("Inex: {}, uniqe hash: {}", i, uniqeHash[i]);
+    }
+    
+    auto count = ReadBuffer(mCellCountBuffer);
+    LOG_WARNING("Num cells: {}", count[0]);
+    LOG_DEBUG("End");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
@@ -79,15 +125,58 @@ void SimulationManager::InitBuffers()
     }    
     mHashBuffer.Generate();
 
-    mCellStartBuffer.mBindingLocation = BindingLocation::BL_UNKNOWN;
-    mCellStartBuffer.mActiveCount = 0;
-    mCellStartBuffer.mTotalCount = 0;
+    mCellFlagBuffer.mBindingLocation = BindingLocation::BL_SHG_CELL_FLAG_BUFFER;
+    mCellFlagBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mCellFlagBuffer.mTotalCount = mHashBuffer.mTotalCount;
+    mCellFlagBuffer.mBufferData.resize(mCellFlagBuffer.mTotalCount);
+    for(uint32_t i = 0; i < mCellFlagBuffer.mTotalCount; i++)
+    {
+        mCellFlagBuffer.mBufferData[i] = UINT_MAX;
+    }
+    mCellFlagBuffer.Generate();
+
+    mCellPrefixBuffer.mBindingLocation = BindingLocation::BL_SHG_CELL_PREFIX_BUFFER;
+    mCellPrefixBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mCellPrefixBuffer.mTotalCount = mHashBuffer.mTotalCount;
+    mCellPrefixBuffer.mBufferData.resize(mCellPrefixBuffer.mTotalCount);
+    for(uint32_t i = 0; i < mCellPrefixBuffer.mTotalCount; i++)
+    {
+        mCellPrefixBuffer.mBufferData[i] = UINT_MAX;
+    }
+    mCellPrefixBuffer.Generate();
+
+    mCellStartBuffer.mBindingLocation = BindingLocation::BL_SHG_START_BUFFER;
+    mCellStartBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mCellStartBuffer.mTotalCount = mHashBuffer.mActiveCount;
+    mCellStartBuffer.mBufferData.resize(mCellStartBuffer.mTotalCount);
+    for(uint32_t i = 0; i < mCellStartBuffer.mTotalCount; i++)
+    {
+        mCellStartBuffer.mBufferData[i] = UINT_MAX;
+    }
     mCellStartBuffer.Generate();
 
-    mCellEndBuffer.mBindingLocation = BindingLocation::BL_UNKNOWN;
-    mCellEndBuffer.mActiveCount = 0;
-    mCellEndBuffer.mTotalCount = 0;
+    mCellEndBuffer.mBindingLocation = BindingLocation::BL_SHG_END_BUFFER;
+    mCellEndBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mCellEndBuffer.mTotalCount = mHashBuffer.mActiveCount;
+    mCellEndBuffer.mBufferData.resize(mCellEndBuffer.mTotalCount);
+    for(uint32_t i = 0; i < mCellEndBuffer.mTotalCount; i++)
+    {
+        mCellEndBuffer.mBufferData[i] = UINT_MAX;
+    }
     mCellEndBuffer.Generate();
+
+    mCellCountBuffer.mBindingLocation = BindingLocation::BL_SHG_CELL_COUNT_BUFFER;
+    mCellCountBuffer.mActiveCount = 1;
+    mCellCountBuffer.mTotalCount = 1;
+    mCellCountBuffer.mBufferData.resize(1);
+    mCellCountBuffer.mBufferData[0] = 0;
+    mCellCountBuffer.Generate();
+
+    mUniqueHashBuffer.mBindingLocation = BindingLocation::BL_SHG_UNIQUE_HASH_BUFFER;
+    mUniqueHashBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mUniqueHashBuffer.mTotalCount = mHashBuffer.mActiveCount;
+    mUniqueHashBuffer.mBufferData.resize(mUniqueHashBuffer.mTotalCount);
+    mUniqueHashBuffer.Generate();
 }
 
 void SimulationManager::GenerateAccretionDiskParticles()
@@ -148,7 +237,7 @@ void SimulationManager::CreateSHGPipeline()
 {
     SimulationPipeline* shgPipeline = new SimulationPipeline("SHG Pipeline");
 
-    ComputeShader* shgHashComputeShader = new ComputeShader(PathUtil::shader_dir("shg_hash.comp"));
+    ComputeShader* shgHashComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_hash.comp"));
     std::vector<SSBOBinding> hashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId), 
                                             SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId)};
     DispatchCallback DispatchCountCallbackHash = [this](){ return mHashBuffer.mTotalCount; };
@@ -158,7 +247,7 @@ void SimulationManager::CreateSHGPipeline()
     SimulationPass* hashPass = new SimulationPass(shgHashComputeShader, hashResources, DispatchCountCallbackHash, uniformsHash);
     shgPipeline->AddPass(hashPass);
 
-    ComputeShader* shgSortComputeShader = new ComputeShader(PathUtil::shader_dir("shg_bitonic_sort.comp"));
+    ComputeShader* shgSortComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_bitonic_sort.comp"));
     std::vector<SSBOBinding> sortResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId)};
     DispatchCallback DispatchCountCallbackSort = [this](){ return mHashBuffer.mTotalCount; };
     UniformCallback cellSizeCallbackSort = [this](Shader* _shader){ BindSHGCellSizeCallback(_shader); };
@@ -167,6 +256,60 @@ void SimulationManager::CreateSHGPipeline()
     ExecuteCallback executeCallbackSort = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BitonicSort(_pass,_count,_groups); };
     SimulationPass* sortPass = new SimulationPass(shgSortComputeShader, sortResources, DispatchCountCallbackSort, uniformsSort, executeCallbackSort);
     shgPipeline->AddPass(sortPass);
+
+    ComputeShader* shgFlagComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_cell_flag.comp"));
+    std::vector<SSBOBinding> flagResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
+                                                SSBOBinding(mCellFlagBuffer.mBindingLocation, mCellFlagBuffer.mId),
+                                                SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
+    DispatchCallback DispatchCountCallbackFlag = [this](){ return mCellFlagBuffer.mTotalCount; };
+    UniformCallback ActiveCountCallbackFlag = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
+    std::vector<UniformCallback> uniformsFlag = {ActiveCountCallbackFlag};
+    SimulationPass* flagPass = new SimulationPass(shgFlagComputeShader, flagResources, DispatchCountCallbackFlag, uniformsFlag);
+    shgPipeline->AddPass(flagPass);
+
+    ComputeShader* shgUpScanComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_up_scan.comp"));
+    std::vector<SSBOBinding> UpScanResources = {SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
+    DispatchCallback DispatchCountCallbackUpScan = [this](){ return mCellPrefixBuffer.mTotalCount; };
+    std::vector<UniformCallback> uniformsUpScan = {};
+    ExecuteCallback executeCallbackUpScan = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BlellochScan_Up(_pass,_count,_groups); };
+    SimulationPass* UpScanPass = new SimulationPass(shgUpScanComputeShader, UpScanResources, DispatchCountCallbackUpScan, uniformsUpScan, executeCallbackUpScan);
+    shgPipeline->AddPass(UpScanPass);
+
+    ComputeShader* shgResetComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_reset.comp"));
+    std::vector<SSBOBinding> ResetResources = {SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId),
+                                                SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
+    DispatchCallback DispatchCountCallbackReset = [this](){ return 1; };
+    std::vector<UniformCallback> uniformsReset = {};
+    SimulationPass* ResetPass = new SimulationPass(shgResetComputeShader, ResetResources, DispatchCountCallbackReset, uniformsReset);
+    shgPipeline->AddPass(ResetPass);
+
+    ComputeShader* shgDownScanComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_down_scan.comp"));
+    std::vector<SSBOBinding> DownScanResources = {SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
+    DispatchCallback DispatchCountCallbackDownScan = [this](){ return mCellPrefixBuffer.mTotalCount; };
+    std::vector<UniformCallback> uniformsDownScan = {};
+    ExecuteCallback executeCallbackDownScan = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BlellochScan_Down(_pass,_count,_groups); };
+    SimulationPass* DownScanPass = new SimulationPass(shgDownScanComputeShader, DownScanResources, DispatchCountCallbackDownScan, uniformsDownScan, executeCallbackDownScan);
+    shgPipeline->AddPass(DownScanPass);
+
+    ComputeShader* shgRangeStartComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_range_start.comp"));
+    std::vector<SSBOBinding> rangeStartResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
+                                                SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
+                                                SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
+                                                SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
+    DispatchCallback DispatchCountCallbackRangeStart = [this](){ return mParticleBuffer.mActiveCount; };
+    std::vector<UniformCallback> uniformsRangeStart = {};
+    SimulationPass* rangeStartPass = new SimulationPass(shgRangeStartComputeShader, rangeStartResources, DispatchCountCallbackRangeStart, uniformsRangeStart);
+    shgPipeline->AddPass(rangeStartPass);
+
+    ComputeShader* shgRangeEndComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_range_end.comp"));
+    std::vector<SSBOBinding> rangeEndResources = {SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
+                                                SSBOBinding(mCellEndBuffer.mBindingLocation, mCellEndBuffer.mId),
+                                                SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
+    DispatchCallback DispatchCountCallbackRangeEnd = [this](){ return mCellEndBuffer.mActiveCount; };
+    UniformCallback ActiveCountCallbackRangeEnd = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
+    std::vector<UniformCallback> uniformsRangeEnd = {ActiveCountCallbackRangeEnd};
+    SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd);
+    shgPipeline->AddPass(rangeEndPass);
 
     mPipelines.push_back(shgPipeline);
 }
@@ -252,6 +395,36 @@ void SimulationManager::BindCustomExecuet_BitonicSort(class SimulationPass* _pas
 
             _pass->Dispatch(_groups);
         }
+    }
+}
+
+void SimulationManager::BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, uint32_t _count, uint32_t _groups)
+{
+    for(int stride = 1; stride < _count; stride <<= 1)
+    {
+        uint32_t localSize = _pass->GetWorkGroupSize();
+        uint32_t invocations = _count / (stride * 2);
+        uint32_t groups = (invocations + localSize - 1) / localSize;
+
+        _pass->GetShader()->use();
+        _pass->GetShader()->setInt("stride", stride);
+
+        _pass->Dispatch(groups);
+    }
+}
+
+void SimulationManager::BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, uint32_t _count, uint32_t _groups)
+{
+    for(int stride = _count/2; stride >= 1; stride >>=1)
+    {
+        uint32_t localSize = _pass->GetWorkGroupSize();
+        uint32_t invocations = _count / (stride * 2);
+        uint32_t groups = (invocations + localSize - 1) / localSize;
+
+        _pass->GetShader()->use();
+        _pass->GetShader()->setInt("stride", stride);
+
+        _pass->Dispatch(groups);
     }
 }
 

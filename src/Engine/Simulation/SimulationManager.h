@@ -19,14 +19,39 @@ private:
     // GPU buffers
     GPUBuffer<Particle> mParticleBuffer;
     GPUBuffer<HashEntry> mHashBuffer;
+    GPUBuffer<uint32_t> mCellFlagBuffer;
+    GPUBuffer<uint32_t> mCellPrefixBuffer;
     GPUBuffer<uint32_t> mCellStartBuffer;
     GPUBuffer<uint32_t> mCellEndBuffer;
-    //GLuint mParticleBuffer;
-    //GLuint mHashBuffer;
-    //GLuint mCellStartBuffer;
-    //GLuint mCellEndBuffer;
+    GPUBuffer<uint32_t> mCellCountBuffer;
+    GPUBuffer<uint32_t> mUniqueHashBuffer;
 
     void InitBuffers();
+
+    template<typename T>
+    std::vector<T> ReadBuffer(GPUBuffer<T>& _buffer)
+    {
+        std::vector<T> data(_buffer.mTotalCount);
+
+        glBindBuffer(
+            GL_SHADER_STORAGE_BUFFER,
+            _buffer.mId
+        );
+
+        glGetBufferSubData(
+            GL_SHADER_STORAGE_BUFFER,
+            0,
+            _buffer.GetSizeBytes(),
+            data.data()
+        );
+
+        glBindBuffer(
+            GL_SHADER_STORAGE_BUFFER,
+            0
+        );
+
+        return data;
+    }
 
     // Simulation
     std::vector<class SimulationPipeline*> mPipelines;
@@ -59,6 +84,8 @@ private:
     void BindSHGCellSizeCallback(class Shader* _shader);
 
     void BindCustomExecuet_BitonicSort(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
+    void BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
+    void BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
 
 public:
 

@@ -1,0 +1,63 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct HashEntry
+{
+    uint hash;
+    uint particleIndex;
+};
+layout(std430, binding = 1)
+buffer hashBuffer
+{
+    HashEntry hashes[];
+};
+
+layout(std430, binding = 2)
+buffer cellStartBuffer
+{
+    uint cellStart[];
+};
+
+layout(std430, binding = 5)
+buffer uniqueHashBuffer
+{
+    uint uniqueHashes[];
+};
+
+layout(std430, binding = 6)
+buffer cellFlagBuffer {
+    uint cellFlags[];
+};
+
+layout(std430, binding = 7)
+buffer cellPrefixBuffer {
+    uint cellScan[];
+};
+
+int GetIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+void main()
+{
+    int id = GetIndex();
+    if(!WithinBounds(id, hashes.length()))
+        return;
+
+    if(cellFlags[id] == 1)
+    {
+        uint cellIndex = cellScan[id];
+
+        uniqueHashes[cellIndex] = hashes[id].hash;
+
+        cellStart[cellIndex] = id;
+    }
+}

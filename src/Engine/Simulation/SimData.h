@@ -11,7 +11,12 @@ using ExecuteCallback = std::function<void(class SimulationPass*, uint32_t, uint
 enum class BindingLocation{
     BL_PARTICLE_BUFFER,
     BL_SHG_HASH_BUFFER,
-    BL_UNKNOWN
+    BL_SHG_START_BUFFER,
+    BL_SHG_END_BUFFER,
+    BL_SHG_CELL_COUNT_BUFFER,
+    BL_SHG_UNIQUE_HASH_BUFFER,
+    BL_SHG_CELL_FLAG_BUFFER,
+    BL_SHG_CELL_PREFIX_BUFFER
 };
 
 struct SSBOBinding{

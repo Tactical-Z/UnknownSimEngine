@@ -39,4 +39,5 @@ public:
     std::string& GetName();
     float GetGPUTimeMS() const;
     class ComputeShader* GetShader();
+    uint32_t GetWorkGroupSize();
 };

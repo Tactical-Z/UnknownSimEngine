@@ -26,13 +26,6 @@ bool WithinBounds(int _id, int _count){
     return true;
 }
 
-void SwapHashIndex(int _a, int _b)
-{
-    HashEntry temp = hashes[_a];
-    hashes[_a] = hashes[_b];
-    hashes[_b] = temp;
-}
-
 void main() {
     
     int id = GetIndex();
