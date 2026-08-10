@@ -1,0 +1,60 @@
+#version 450 core
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 4)
+buffer CounterBuffer
+{
+    uint cellCount;
+};
+
+layout(std430, binding = 5)
+buffer uniqueHashBuffer
+{
+    uint uniqueHashes[];
+};
+
+struct HashLookupEntry{
+    uint hash;
+    uint cellIndex;
+};
+layout(std430, binding = 8)
+buffer LookupBuffer
+{
+    HashLookupEntry lookup[];
+};
+
+int GetCellIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+void main() {
+    int cell = GetCellIndex();
+
+    if(!WithinBounds(cell, int(cellCount)))
+        return;
+
+    uint lookupSize = lookup.length();
+    uint hash = uniqueHashes[cell];
+    uint slot = hash & (lookupSize - 1);
+
+    while(true)
+    {
+        uint old = atomicCompSwap(lookup[slot].hash, 0xffffffff, hash);
+
+        if(old == 0xffffffff)
+        {
+            lookup[slot].cellIndex = cell;
+            break;
+        }
+
+        slot = (slot + 1) & (lookupSize - 1);
+    }
+}

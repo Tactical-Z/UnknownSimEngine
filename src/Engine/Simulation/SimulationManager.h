@@ -25,6 +25,7 @@ private:
     GPUBuffer<uint32_t> mCellEndBuffer;
     GPUBuffer<uint32_t> mCellCountBuffer;
     GPUBuffer<uint32_t> mUniqueHashBuffer;
+    GPUBuffer<HashLookupEntry> mHashLookupBuffer;
 
     void InitBuffers();
 

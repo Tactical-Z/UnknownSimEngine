@@ -44,50 +44,57 @@ void SimulationManager::Update(float _dt)
         pipline->ExecutePipeline();
     }
 
-    LOG_WARNING("Hashes: ");
-    auto hashes = ReadBuffer(mHashBuffer);
-    for(uint32_t i = 0; i < hashes.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, Hash: {}, particleIndex: {}", i, hashes[i].hash,hashes[i].particleIndex);
-    }
+    // LOG_WARNING("Hashes: ");
+    // auto hashes = ReadBuffer(mHashBuffer);
+    // for(uint32_t i = 0; i < hashes.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, Hash: {}, particleIndex: {}", i, hashes[i].hash,hashes[i].particleIndex);
+    // }
 
-    LOG_WARNING("Flag buffer: ");
-    auto flag = ReadBuffer(mCellFlagBuffer);
-    for(uint32_t i = 0; i < flag.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, flag: {}", i, flag[i]);
-    }
+    // LOG_WARNING("Flag buffer: ");
+    // auto flag = ReadBuffer(mCellFlagBuffer);
+    // for(uint32_t i = 0; i < flag.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, flag: {}", i, flag[i]);
+    // }
 
-    LOG_WARNING("Prefix buffer: ");
-    auto prefix = ReadBuffer(mCellPrefixBuffer);
-    for(uint32_t i = 0; i < prefix.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, prefix: {}", i, prefix[i]);
-    }
+    // LOG_WARNING("Prefix buffer: ");
+    // auto prefix = ReadBuffer(mCellPrefixBuffer);
+    // for(uint32_t i = 0; i < prefix.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, prefix: {}", i, prefix[i]);
+    // }
 
-    LOG_WARNING("CellStart: ");
-    auto cellStart = ReadBuffer(mCellStartBuffer);
-    for(uint32_t i = 0; i < cellStart.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, cellStart: {}", i, cellStart[i]);
-    }
+    // LOG_WARNING("CellStart: ");
+    // auto cellStart = ReadBuffer(mCellStartBuffer);
+    // for(uint32_t i = 0; i < cellStart.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, cellStart: {}", i, cellStart[i]);
+    // }
 
-    LOG_WARNING("Cell End: ");
-    auto cellEnd = ReadBuffer(mCellEndBuffer);
-    for(uint32_t i = 0; i < cellEnd.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, cellEnd: {}", i, cellEnd[i]);
-    }
+    // LOG_WARNING("Cell End: ");
+    // auto cellEnd = ReadBuffer(mCellEndBuffer);
+    // for(uint32_t i = 0; i < cellEnd.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, cellEnd: {}", i, cellEnd[i]);
+    // }
 
-    LOG_WARNING("Unique Hashes: ");
-    auto uniqeHash = ReadBuffer(mUniqueHashBuffer);
-    for(uint32_t i = 0; i < uniqeHash.size(); i++)
-    {
-        LOG_DEBUG("Inex: {}, uniqe hash: {}", i, uniqeHash[i]);
-    }
+    // LOG_WARNING("Unique Hashes: ");
+    // auto uniqeHash = ReadBuffer(mUniqueHashBuffer);
+    // for(uint32_t i = 0; i < uniqeHash.size(); i++)
+    // {
+    //     LOG_DEBUG("Inex: {}, uniqe hash: {}", i, uniqeHash[i]);
+    // }
     
-    auto count = ReadBuffer(mCellCountBuffer);
-    LOG_WARNING("Num cells: {}", count[0]);
+    // auto count = ReadBuffer(mCellCountBuffer);
+    // LOG_WARNING("Num cells: {}", count[0]);
+    
+    LOG_WARNING("Lookuptable: ");
+    auto table = ReadBuffer(mHashLookupBuffer);
+    for(uint32_t i = 0; i < table.size(); i++)
+    {
+        LOG_DEBUG("Index: {}, Hash: {}, cell: {}", i, table[i].hash, table[i].cellIndex);
+    }
     LOG_DEBUG("End");
 }
 
@@ -177,6 +184,18 @@ void SimulationManager::InitBuffers()
     mUniqueHashBuffer.mTotalCount = mHashBuffer.mActiveCount;
     mUniqueHashBuffer.mBufferData.resize(mUniqueHashBuffer.mTotalCount);
     mUniqueHashBuffer.Generate();
+
+    mHashLookupBuffer.mBindingLocation = BindingLocation::BL_SHG_HASH_LOOKUP_BUFFER;
+    mHashLookupBuffer.mActiveCount = mHashBuffer.mActiveCount;
+    mHashLookupBuffer.mTotalCount = mHashBuffer.mTotalCount;
+    mHashLookupBuffer.mBufferData.resize(mHashLookupBuffer.mTotalCount);
+    for(uint32_t i = 0; i < mHashLookupBuffer.mTotalCount; i++)
+    {
+        mHashLookupBuffer.mBufferData[i].hash = UINT_MAX;
+        mHashLookupBuffer.mBufferData[i].cellIndex = UINT_MAX;
+    }
+    mHashLookupBuffer.Generate();
+    
 }
 
 void SimulationManager::GenerateAccretionDiskParticles()
@@ -310,6 +329,15 @@ void SimulationManager::CreateSHGPipeline()
     std::vector<UniformCallback> uniformsRangeEnd = {ActiveCountCallbackRangeEnd};
     SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd);
     shgPipeline->AddPass(rangeEndPass);
+
+    ComputeShader* shgLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_build_lookup_table.comp"));
+    std::vector<SSBOBinding> LookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId),
+                                                SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
+                                                SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
+    DispatchCallback DispatchCountCallbackLookUp = [this](){ return mCellCountBuffer.ReadBack()[0]; };
+    std::vector<UniformCallback> uniformsLookUp = {};
+    SimulationPass* LookUpPass = new SimulationPass(shgLookUpComputeShader, LookUpResources, DispatchCountCallbackLookUp, uniformsLookUp);
+    shgPipeline->AddPass(LookUpPass);
 
     mPipelines.push_back(shgPipeline);
 }

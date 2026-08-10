@@ -16,7 +16,8 @@ enum class BindingLocation{
     BL_SHG_CELL_COUNT_BUFFER,
     BL_SHG_UNIQUE_HASH_BUFFER,
     BL_SHG_CELL_FLAG_BUFFER,
-    BL_SHG_CELL_PREFIX_BUFFER
+    BL_SHG_CELL_PREFIX_BUFFER,
+    BL_SHG_HASH_LOOKUP_BUFFER
 };
 
 struct SSBOBinding{
@@ -40,6 +41,30 @@ struct GPUBuffer {
     size_t GetSizeBytes() const
     {
         return mBufferData.size() * sizeof(T);
+    }
+
+    std::vector<T> ReadBack()
+    {
+        std::vector<T> data(mTotalCount);
+
+        glBindBuffer(
+            GL_SHADER_STORAGE_BUFFER,
+            mId
+        );
+
+        glGetBufferSubData(
+            GL_SHADER_STORAGE_BUFFER,
+            0,
+            GetSizeBytes(),
+            data.data()
+        );
+
+        glBindBuffer(
+            GL_SHADER_STORAGE_BUFFER,
+            0
+        );
+
+        return data;
     }
 
     void Generate()
@@ -69,7 +94,6 @@ struct GPUBuffer {
                 GL_DYNAMIC_DRAW
             );
         }
-
 
         glBindBuffer(
             GL_SHADER_STORAGE_BUFFER,

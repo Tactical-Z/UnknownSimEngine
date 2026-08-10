@@ -7,3 +7,8 @@ struct HashEntry{
     unsigned int hash;
     unsigned int particleIndex;
 };
+
+struct HashLookupEntry{
+    unsigned int hash;
+    unsigned int cellIndex;
+};
