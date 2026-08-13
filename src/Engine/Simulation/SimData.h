@@ -3,10 +3,11 @@
 #include <functional>
 #include <vector>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
 
 using UniformCallback = std::function<void(class Shader*)>;
-using DispatchCallback = std::function<uint32_t()>;
-using ExecuteCallback = std::function<void(class SimulationPass*, uint32_t, uint32_t)>; // for custom execution code
+using DispatchCallback = std::function<glm::ivec3()>;
+using ExecuteCallback = std::function<void(class SimulationPass*, glm::ivec3, glm::ivec3)>; // for custom execution code
 
 enum class BindingLocation{
     BL_PARTICLE_BUFFER,

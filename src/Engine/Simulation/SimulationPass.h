@@ -16,13 +16,13 @@ public:
                     ExecuteCallback _execute = nullptr);
     ~SimulationPass();
     void Execute();
-    void Dispatch(const uint32_t& _count);
+    void Dispatch(const glm::ivec3& _groupSize);
 
 private: 
     std::string mName;
     class ComputeShader* mSolver = nullptr;
     DispatchCallback mDispatchCountCallback;
-    uint32_t mWorkGroupSize = 0;
+    glm::ivec3 mWorkGroupSize;
     std::vector<SSBOBinding> mResources;
     std::vector<UniformCallback> mUniforms;
     ExecuteCallback mExecuteCallback;
@@ -34,10 +34,11 @@ private:
     void BindResources();
     void BindUniforms();
 public:
+    glm::ivec3 NumGroups(glm::ivec3 _count);
     bool IsEnabled();
     void SetIsEnabled(bool _b);
     std::string& GetName();
     float GetGPUTimeMS() const;
     class ComputeShader* GetShader();
-    uint32_t GetWorkGroupSize();
+    glm::ivec3 GetWorkGroupSize();
 };

@@ -1,7 +1,9 @@
 #pragma once
 
-// cell size should be same as smothing radius for SPH, this is temp value
-constexpr float gCellSize = 10.0f;
+// ToDo: Move this to an SPH / SHG spesific location
+// cellSize >= smoothingRadius
+constexpr float gCellSize = 5.0f;
+constexpr float gSmoothingRadius = 2.5f;
 
 struct HashEntry{
     unsigned int hash;

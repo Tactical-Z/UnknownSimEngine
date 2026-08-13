@@ -1,5 +1,9 @@
 #include "Engine/Rendering/Renderer.h"
 #include "Engine/Camera.h"
+#include "Engine/Simulation/SimData.h"
+#include "Engine/Simulation/ParticleData.h"
+#include "Engine/Simulation/HashGridData.h"
+#include "Engine/Simulation/SimulationPass.h"
 #include "Shaders/ComputeShader.h"
 #include "Shaders/VisShader.h"
 #include "Engine/Rendering/Texture.h"
@@ -16,34 +20,30 @@ Renderer::~Renderer(){
     delete mDisplayTexture;
     delete mVisShader;
     delete mSkyboxTexture;
-    delete mComputeShader;
+    delete mRaytracePass;
+
+    // Not owned by this class
+    mCameraRef = nullptr;
+    mObjectsRef = nullptr;
 }
 
-void Renderer::Init()
+void Renderer::Init(std::vector<SSBOBinding> _raytracerResources, const Camera* _camera, const std::vector<class Object*>* _objects)
 {
+    mCameraRef = _camera;
+    mObjectsRef = _objects;
+
     InitBuffers();
-    InitShaders();
+    InitShaders(_raytracerResources);
     InitTextures();
 }
 
-void Renderer::Render(const Camera* _camera, const std::vector<class Object*>& _objects)
+void Renderer::Render()
 {
-    if(!mDisplayTexture || !mVisShader || !mComputeShader)
+    if(!mDisplayTexture || !mVisShader || !mRaytracePass)
         return;
 
-    
     // Compute Shader
-    mComputeShader->use();
-    BindCamera(mComputeShader, _camera);
-    BindObjects(mComputeShader, _objects);
-    BindTextures(mComputeShader);
-    BindSimulations(mComputeShader);
-    BindUniforms(mComputeShader);
-
-    GLuint groupsX = (mWindowSize.x + 9) / 10;
-    GLuint groupsY = (mWindowSize.y + 9) / 10;
-    glDispatchCompute(groupsX, groupsY, 1);
-    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+    mRaytracePass->Execute();
     
     // Render Shader
     glBindVertexArray(mVAO);
@@ -59,10 +59,19 @@ void Renderer::InitBuffers()
     glBindVertexArray(mVAO);
 }
 
-void Renderer::InitShaders()
+void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
 {
     mVisShader = new VisShader(PathUtil::shader_dir("general.vert"), PathUtil::shader_dir("general.frag"));
-    mComputeShader = new ComputeShader(PathUtil::shader_dir("general.comp"));
+    
+    ComputeShader* rayTraceComputeShader = new ComputeShader(PathUtil::shader_dir("general.comp"));
+    std::vector<SSBOBinding> rayTraceResources = _raytracerResources;
+    DispatchCallback rayTraceDispatchCountCallback = [this](){ return glm::ivec3(mWindowSize.x, mWindowSize.y, 1); };
+    UniformCallback rayTraceTextureCallback = [this](Shader* _shader){ BindTextures(_shader); };
+    UniformCallback rayTraceCameraCallback = [this](Shader* _shader){ BindCamera(_shader); };
+    UniformCallback rayTraceRefObjectsCallback = [this](Shader* _shader){ BindReferenceObjects(_shader); };
+    UniformCallback rayTraceUniformsCallback = [this](Shader* _shader){ BindUniforms(_shader); };
+    std::vector<UniformCallback> rayTraceUniforms = {rayTraceTextureCallback, rayTraceCameraCallback, rayTraceRefObjectsCallback, rayTraceUniformsCallback};
+    mRaytracePass = new SimulationPass(rayTraceComputeShader, rayTraceResources, rayTraceDispatchCountCallback, rayTraceUniforms);
 }
 
 void Renderer::InitTextures()
@@ -78,22 +87,21 @@ void Renderer::GenerateDisplayTexture()
     mDisplayTexture = new Texture(mWindowSize.x, mWindowSize.y);
 }
 
-void Renderer::BindCamera(const Shader* _shader, const Camera* _camera)
+void Renderer::BindCamera(const Shader* _shader)
 {
     _shader->use();
-    _shader->setVec3("camera.position", _camera->GetPosition());
-    _shader->setVec3("camera.up", _camera->GetUp());
-    _shader->setVec3("camera.right", _camera->GetRight());
-    _shader->setVec3("camera.front", _camera->GetFront());
-    _shader->setFloat("camera.fov", _camera->GetFov());
-    _shader->setFloat("camera.maxRayLength", _camera->GetFarplane());
-    _shader->setInt("camera.numRayChecks", _camera->GetNumRayChecks());
+    _shader->setVec3("camera.position", mCameraRef->GetPosition());
+    _shader->setVec3("camera.up", mCameraRef->GetUp());
+    _shader->setVec3("camera.right", mCameraRef->GetRight());
+    _shader->setVec3("camera.front", mCameraRef->GetFront());
+    _shader->setFloat("camera.fov", mCameraRef->GetFov());
+    _shader->setFloat("camera.maxRayLength", mCameraRef->GetFarplane());
 }
 
-void Renderer::BindObjects(const Shader* _shader, const std::vector<Object*>& _objects)
+void Renderer::BindReferenceObjects(const Shader* _shader)
 {
     _shader->use();
-    for (Object* object : _objects){
+    for (Object* object : *mObjectsRef){
         BlackHole* blackHole = dynamic_cast<BlackHole*>(object);
         if(blackHole){
             _shader->setVec3("sphere.position", blackHole->GetPosition());
@@ -114,26 +122,15 @@ void Renderer::BindTextures(const class Shader* _shader)
     _shader->setInt("skybox", 0);
 }
 
-void Renderer::BindSimulations(const class Shader* _shader)
-{
-    if(mBindParticleStorageBufferCallback)
-        mBindParticleStorageBufferCallback();
-    else 
-        LOG_ERROR("Bind Simulation Buffer Callback invalid when called.");
-}
-
 void Renderer::BindUniforms(const class Shader* _shader)
 {
-    
+    _shader->use();
+    _shader->setFloat("cellSize", gCellSize);
+    _shader->setFloat("particleRadius", gParticleRadius);
 }
 
 void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){
     
     mWindowSize = _newWindowSize;
     GenerateDisplayTexture();
-}
-
-void Renderer::SetBindParticleStorageBufferCallback(BindParticleStorageBufferCallback _callback)
-{
-    mBindParticleStorageBufferCallback = _callback;
 }

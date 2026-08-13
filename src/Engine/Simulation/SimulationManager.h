@@ -14,7 +14,7 @@ public:
     void Update(float _dt);
 
     void BindBuffer(GLint _bufferID, int _layout);
-    void BindParticleBuffer();
+
 private:
     // GPU buffers
     GPUBuffer<Particle> mParticleBuffer;
@@ -59,8 +59,6 @@ private:
     float mSimulationSpeed = 1.0f;
 
     // Simulation Data
-    //std::array<Particle, NUM_PARTICLE_MAX> mParticles;
-    float mParticleRadius = 0.5f;
     glm::vec2 mRadiusSpawnBounds = glm::vec2(1, 20); // Schwarzschild radius
     
     void GenerateAccretionDiskParticles();
@@ -83,14 +81,18 @@ private:
     void BindActiveCountCallback(class Shader* _shader);
     void BindRefObjCallback(class Shader* _shader);  
     void BindSHGCellSizeCallback(class Shader* _shader);
+    void BindSPHSmoothingRadius(class Shader* _shader);
 
-    void BindCustomExecuet_BitonicSort(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
-    void BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
-    void BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, uint32_t _count, uint32_t _groups);
+    
+    // ToDo: Update to use dynamic group allocation, currently only uses X invocation slot.
+    void BindCustomExecuet_BitonicSort(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
+    void BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
+    void BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
 
 public:
 
     class BlackHole* GetBlackHoleRefObject();
     float& GetSimulationSpeedRef();
+    std::vector<SSBOBinding> GetRaytracerResources();
     std::vector<std::pair<const char*, float>> GetSimulationUIData();
 };

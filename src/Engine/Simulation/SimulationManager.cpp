@@ -89,23 +89,18 @@ void SimulationManager::Update(float _dt)
     // auto count = ReadBuffer(mCellCountBuffer);
     // LOG_WARNING("Num cells: {}", count[0]);
     
-    LOG_WARNING("Lookuptable: ");
-    auto table = ReadBuffer(mHashLookupBuffer);
-    for(uint32_t i = 0; i < table.size(); i++)
-    {
-        LOG_DEBUG("Index: {}, Hash: {}, cell: {}", i, table[i].hash, table[i].cellIndex);
-    }
-    LOG_DEBUG("End");
+    // LOG_WARNING("Lookuptable: ");
+    // auto table = ReadBuffer(mHashLookupBuffer);
+    // for(uint32_t i = 0; i < table.size(); i++)
+    // {
+    //     LOG_DEBUG("Index: {}, Hash: {}, cell: {}", i, table[i].hash, table[i].cellIndex);
+    // }
+    // LOG_DEBUG("End");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
 {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _layout, _bufferID);
-}
-
-void SimulationManager::BindParticleBuffer()
-{
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, (GLint)BindingLocation::BL_PARTICLE_BUFFER, mParticleBuffer.mId);
 }
 
 void SimulationManager::InitBuffers()
@@ -213,7 +208,7 @@ void SimulationManager::GenerateAccretionDiskParticles()
                                             blackHole->GetPosition().y + (randomRadius * sin(randomAngle)),
                                             blackHole->GetPosition().z + (randomZDeviation));
 
-            particle.mRadius = mParticleRadius;
+            particle.mRadius = gParticleRadius;
             
             // finding tangental vector by differentiating inital position rotation. x: cos -> -sin, y: sin -> cos
             float initalOrbitalVelocity = SMath::OrbitalVelocity(randomRadius, blackHole->GetMass());
@@ -222,6 +217,7 @@ void SimulationManager::GenerateAccretionDiskParticles()
                                             0);
 
             particle.mMass = 0.f;
+            particle.mColor = glm::vec4(1.f,0.f,0,1.f);
         }
     } else {
         // Spawn particles randomly near centre of world
@@ -241,7 +237,7 @@ void SimulationManager::CreateGravityPipeline()
 
     ComputeShader* gravityComputeShader = new ComputeShader(PathUtil::shader_dir("accretionDiskGravSolver.comp"));
     std::vector<SSBOBinding> resources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId)};
-    DispatchCallback DispatchCountCallback = [this](){ return mParticleBuffer.mActiveCount; };
+    DispatchCallback DispatchCountCallback = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,0,0); };
     UniformCallback RefObjCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
     UniformCallback DTCallback = [this](Shader* _shader){ BindDTCallback(_shader); };
     UniformCallback GCallback = [this](Shader* _shader){ BindGCallback(_shader); };
@@ -259,7 +255,7 @@ void SimulationManager::CreateSHGPipeline()
     ComputeShader* shgHashComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_hash.comp"));
     std::vector<SSBOBinding> hashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId), 
                                             SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId)};
-    DispatchCallback DispatchCountCallbackHash = [this](){ return mHashBuffer.mTotalCount; };
+    DispatchCallback DispatchCountCallbackHash = [this](){ return glm::ivec3(mHashBuffer.mTotalCount,1,1); };
     UniformCallback cellSizeCallbackHash = [this](Shader* _shader){ BindSHGCellSizeCallback(_shader); };
     UniformCallback ActiveCountCallbackHash = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsHash = {cellSizeCallbackHash, ActiveCountCallbackHash};
@@ -268,11 +264,11 @@ void SimulationManager::CreateSHGPipeline()
 
     ComputeShader* shgSortComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_bitonic_sort.comp"));
     std::vector<SSBOBinding> sortResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId)};
-    DispatchCallback DispatchCountCallbackSort = [this](){ return mHashBuffer.mTotalCount; };
+    DispatchCallback DispatchCountCallbackSort = [this](){ return glm::ivec3(mHashBuffer.mTotalCount,1,1); };
     UniformCallback cellSizeCallbackSort = [this](Shader* _shader){ BindSHGCellSizeCallback(_shader); };
     UniformCallback ActiveCountCallbackSort = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsSort = {cellSizeCallbackSort, ActiveCountCallbackSort};
-    ExecuteCallback executeCallbackSort = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BitonicSort(_pass,_count,_groups); };
+    ExecuteCallback executeCallbackSort = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BitonicSort(_pass,_count,_groups); };
     SimulationPass* sortPass = new SimulationPass(shgSortComputeShader, sortResources, DispatchCountCallbackSort, uniformsSort, executeCallbackSort);
     shgPipeline->AddPass(sortPass);
 
@@ -280,7 +276,7 @@ void SimulationManager::CreateSHGPipeline()
     std::vector<SSBOBinding> flagResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
                                                 SSBOBinding(mCellFlagBuffer.mBindingLocation, mCellFlagBuffer.mId),
                                                 SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
-    DispatchCallback DispatchCountCallbackFlag = [this](){ return mCellFlagBuffer.mTotalCount; };
+    DispatchCallback DispatchCountCallbackFlag = [this](){ return glm::ivec3(mCellFlagBuffer.mTotalCount,1,1); };
     UniformCallback ActiveCountCallbackFlag = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsFlag = {ActiveCountCallbackFlag};
     SimulationPass* flagPass = new SimulationPass(shgFlagComputeShader, flagResources, DispatchCountCallbackFlag, uniformsFlag);
@@ -288,25 +284,25 @@ void SimulationManager::CreateSHGPipeline()
 
     ComputeShader* shgUpScanComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_up_scan.comp"));
     std::vector<SSBOBinding> UpScanResources = {SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
-    DispatchCallback DispatchCountCallbackUpScan = [this](){ return mCellPrefixBuffer.mTotalCount; };
+    DispatchCallback DispatchCountCallbackUpScan = [this](){ return glm::ivec3(mCellPrefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> uniformsUpScan = {};
-    ExecuteCallback executeCallbackUpScan = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BlellochScan_Up(_pass,_count,_groups); };
+    ExecuteCallback executeCallbackUpScan = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BlellochScan_Up(_pass,_count,_groups); };
     SimulationPass* UpScanPass = new SimulationPass(shgUpScanComputeShader, UpScanResources, DispatchCountCallbackUpScan, uniformsUpScan, executeCallbackUpScan);
     shgPipeline->AddPass(UpScanPass);
 
     ComputeShader* shgResetComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_reset.comp"));
     std::vector<SSBOBinding> ResetResources = {SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId),
                                                 SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
-    DispatchCallback DispatchCountCallbackReset = [this](){ return 1; };
+    DispatchCallback DispatchCountCallbackReset = [this](){ return glm::ivec3(1,1,1); };
     std::vector<UniformCallback> uniformsReset = {};
     SimulationPass* ResetPass = new SimulationPass(shgResetComputeShader, ResetResources, DispatchCountCallbackReset, uniformsReset);
     shgPipeline->AddPass(ResetPass);
 
     ComputeShader* shgDownScanComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_blelloch_down_scan.comp"));
     std::vector<SSBOBinding> DownScanResources = {SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
-    DispatchCallback DispatchCountCallbackDownScan = [this](){ return mCellPrefixBuffer.mTotalCount; };
+    DispatchCallback DispatchCountCallbackDownScan = [this](){ return glm::ivec3(mCellPrefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> uniformsDownScan = {};
-    ExecuteCallback executeCallbackDownScan = [this](SimulationPass* _pass, uint32_t _count, uint32_t _groups){ BindCustomExecuet_BlellochScan_Down(_pass,_count,_groups); };
+    ExecuteCallback executeCallbackDownScan = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BlellochScan_Down(_pass,_count,_groups); };
     SimulationPass* DownScanPass = new SimulationPass(shgDownScanComputeShader, DownScanResources, DispatchCountCallbackDownScan, uniformsDownScan, executeCallbackDownScan);
     shgPipeline->AddPass(DownScanPass);
 
@@ -315,7 +311,7 @@ void SimulationManager::CreateSHGPipeline()
                                                 SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
                                                 SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
                                                 SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
-    DispatchCallback DispatchCountCallbackRangeStart = [this](){ return mParticleBuffer.mActiveCount; };
+    DispatchCallback DispatchCountCallbackRangeStart = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,1,1); };
     std::vector<UniformCallback> uniformsRangeStart = {};
     SimulationPass* rangeStartPass = new SimulationPass(shgRangeStartComputeShader, rangeStartResources, DispatchCountCallbackRangeStart, uniformsRangeStart);
     shgPipeline->AddPass(rangeStartPass);
@@ -324,17 +320,24 @@ void SimulationManager::CreateSHGPipeline()
     std::vector<SSBOBinding> rangeEndResources = {SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
                                                 SSBOBinding(mCellEndBuffer.mBindingLocation, mCellEndBuffer.mId),
                                                 SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
-    DispatchCallback DispatchCountCallbackRangeEnd = [this](){ return mCellEndBuffer.mActiveCount; };
+    DispatchCallback DispatchCountCallbackRangeEnd = [this](){ return glm::ivec3(mCellEndBuffer.mActiveCount,1,1); };
     UniformCallback ActiveCountCallbackRangeEnd = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsRangeEnd = {ActiveCountCallbackRangeEnd};
     SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd);
     shgPipeline->AddPass(rangeEndPass);
 
+    ComputeShader* shgResetLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_reset_lookup_table.comp"));
+    std::vector<SSBOBinding> ResetLookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
+    DispatchCallback DispatchCountCallbackResetLookUp = [this](){ return glm::ivec3(mCellCountBuffer.ReadBack()[0],1,1); };
+    std::vector<UniformCallback> uniformsResetLookUp = {};
+    SimulationPass* ResetLookUpPass = new SimulationPass(shgResetLookUpComputeShader, ResetLookUpResources, DispatchCountCallbackResetLookUp, uniformsResetLookUp);
+    shgPipeline->AddPass(ResetLookUpPass);
+
     ComputeShader* shgLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_build_lookup_table.comp"));
     std::vector<SSBOBinding> LookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId),
                                                 SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
                                                 SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
-    DispatchCallback DispatchCountCallbackLookUp = [this](){ return mCellCountBuffer.ReadBack()[0]; };
+    DispatchCallback DispatchCountCallbackLookUp = [this](){ return glm::ivec3(mCellCountBuffer.ReadBack()[0],1,1); };
     std::vector<UniformCallback> uniformsLookUp = {};
     SimulationPass* LookUpPass = new SimulationPass(shgLookUpComputeShader, LookUpResources, DispatchCountCallbackLookUp, uniformsLookUp);
     shgPipeline->AddPass(LookUpPass);
@@ -344,17 +347,22 @@ void SimulationManager::CreateSHGPipeline()
 
 void SimulationManager::CreateSPHPipeline()
 {
-    // SimulationPipeline* sphPipeline = new SimulationPipeline("SPH Pipeline");
+    SimulationPipeline* sphPipeline = new SimulationPipeline("SPH Pipeline");
 
-    // ComputeShader* sphComputeShader = new ComputeShader(PathUtil::shader_dir("accretionDiskSPHSolver.comp"));
-    // std::vector<SSBOBinding> resources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId)};
-    // DispatchCallback DispatchCountCallback = [this](){ return mParticleBuffer.mActiveCount; };
-    // UniformCallback RefObjCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
-    // std::vector<UniformCallback> uniforms = {RefObjCallback};
-    // SimulationPass* pass = new SimulationPass(sphComputeShader, resources, DispatchCountCallback, uniforms);
-    // sphPipeline->AddPass(pass);
+    ComputeShader* sphComputeShader = new ComputeShader(PathUtil::shader_dir("sph_particle.comp"));
+    std::vector<SSBOBinding> sphResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
+                                            SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
+                                            SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
+                                            SSBOBinding(mCellEndBuffer.mBindingLocation, mCellEndBuffer.mId),
+                                            SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
+    DispatchCallback sphDispatchCountCallback = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,1,1); };
+    UniformCallback sphCellSizeCallback = [this](Shader* _shader){ BindSHGCellSizeCallback(_shader); };
+    UniformCallback sphSmoothingRadiusCallback = [this](Shader* _shader){ BindSPHSmoothingRadius(_shader); };
+    std::vector<UniformCallback> sphUniforms = {sphCellSizeCallback, sphSmoothingRadiusCallback};
+    SimulationPass* sphPass = new SimulationPass(sphComputeShader, sphResources, sphDispatchCountCallback, sphUniforms);
+    sphPipeline->AddPass(sphPass);
 
-    // mPipelines.push_back(sphPipeline);
+    mPipelines.push_back(sphPipeline);
 }
 
 void SimulationManager::BindDTCallback(Shader* _shader)
@@ -406,14 +414,29 @@ void SimulationManager::BindSHGCellSizeCallback(class Shader* _shader)
     _shader->setFloat("cellSize", gCellSize);
 }
 
-void SimulationManager::BindCustomExecuet_BitonicSort(class SimulationPass* _pass, uint32_t _count, uint32_t _groups)
+void  SimulationManager::BindSPHSmoothingRadius(class Shader* _shader)
 {
-    if(!std::has_single_bit(_count)){
+    _shader->use();
+    _shader->setFloat("smoothingRadius", gSmoothingRadius);
+}
+
+std::vector<SSBOBinding> SimulationManager::GetRaytracerResources()
+{
+    return {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
+            SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
+            SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
+            SSBOBinding(mCellEndBuffer.mBindingLocation, mCellEndBuffer.mId),
+            SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
+}
+
+void SimulationManager::BindCustomExecuet_BitonicSort(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups)
+{
+    if(!std::has_single_bit(unsigned int(_count.x))){
         LOG_ERROR("Bitonic Sort requires number of invocations as a power of two. Shader pass not run");
         return;
     }
 
-    for(uint32_t k = 2; k <= _count; k <<= 1)
+    for(uint32_t k = 2; k <= _count.x; k <<= 1)
     {
         for(uint32_t j = k >> 1; j > 0; j >>= 1)
         {
@@ -426,13 +449,12 @@ void SimulationManager::BindCustomExecuet_BitonicSort(class SimulationPass* _pas
     }
 }
 
-void SimulationManager::BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, uint32_t _count, uint32_t _groups)
+void SimulationManager::BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups)
 {
-    for(int stride = 1; stride < _count; stride <<= 1)
+    for(int stride = 1; stride < _count.x; stride <<= 1)
     {
-        uint32_t localSize = _pass->GetWorkGroupSize();
-        uint32_t invocations = _count / (stride * 2);
-        uint32_t groups = (invocations + localSize - 1) / localSize;
+        uint32_t invocations = _count.x / (stride * 2);
+        glm::ivec3 groups = _pass->NumGroups(glm::ivec3(invocations,0,0));
 
         _pass->GetShader()->use();
         _pass->GetShader()->setInt("stride", stride);
@@ -441,13 +463,12 @@ void SimulationManager::BindCustomExecuet_BlellochScan_Up(class SimulationPass* 
     }
 }
 
-void SimulationManager::BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, uint32_t _count, uint32_t _groups)
+void SimulationManager::BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups)
 {
-    for(int stride = _count/2; stride >= 1; stride >>=1)
+    for(int stride = _count.x/2; stride >= 1; stride >>=1)
     {
-        uint32_t localSize = _pass->GetWorkGroupSize();
-        uint32_t invocations = _count / (stride * 2);
-        uint32_t groups = (invocations + localSize - 1) / localSize;
+        uint32_t invocations = _count.x / (stride * 2);
+        glm::ivec3 groups = _pass->NumGroups(glm::ivec3(invocations,0,0));
 
         _pass->GetShader()->use();
         _pass->GetShader()->setInt("stride", stride);

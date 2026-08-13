@@ -1,0 +1,154 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+    float mass;
+    vec4 color;
+};
+layout (std430, binding = 0)
+buffer particleBuffer {
+    Particle particles[];
+};
+
+struct HashEntry{
+    uint hash;
+    uint particleIndex;
+};
+layout(std430, binding = 1)
+buffer hashBuffer {
+    HashEntry hashes[];
+};
+
+layout(std430, binding = 2)
+buffer cellStartBuffer
+{
+    uint cellStart[];
+};
+
+layout(std430, binding = 3)
+buffer cellEndBuffer
+{
+    uint cellEnd[];
+};
+
+struct HashLookupEntry{
+    uint hash;
+    uint cellIndex;
+};
+layout(std430, binding = 8)
+buffer LookupBuffer
+{
+    HashLookupEntry lookup[];
+};
+
+uniform float cellSize;
+uniform float smoothingRadius;
+
+int GetParticleIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+uint Hash(ivec3 _c)
+{
+    const uint h1 = 79801u;
+    const uint h2 = 62548u;
+    const uint h3 = 32193u;
+    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hashing.
+    return uint(_c.x) * h1 ^ uint(_c.y) * h2 ^ uint(_c.z) * h3;
+}
+
+uint FindCell(uint _hash)
+{
+    uint mask = lookup.length() - 1;
+    uint slot = _hash & mask;
+
+    while (true)
+    {
+        uint storedHash = lookup[slot].hash;
+
+        // cell does not exist
+        if (storedHash == 0xffffffff)
+            return 0xffffffff;
+
+        // correct cell
+        if (storedHash == _hash)
+            return lookup[slot].cellIndex;
+
+        // Collision, try next
+        slot = (slot + 1) & mask;
+    }
+}
+
+void FindNeighbours(uint _particleIndex)
+{
+    // Get particle cell
+    vec3 particlePosition = particles[_particleIndex].position;
+    ivec3 particleCell = ivec3(floor(particlePosition / cellSize));
+    float numNeighbours = 0;
+    vec3 neighbourColor = vec3(0.f,0.f,0.f);
+
+    // Neighbour search all 27 closest cells
+    for (int z = -1; z <= 1; ++z)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            for (int x = -1; x <= 1; ++x)
+            {
+                // Get the spesific neigbour cell
+                ivec3 neighbourCell = particleCell + ivec3(x, y, z);
+                uint hash = Hash(neighbourCell);
+                uint cellIndex = FindCell(hash);
+                if (cellIndex == 0xffffffff)
+                    continue;
+
+                // intalize start and end index
+                uint start = cellStart[cellIndex];
+                uint end   = cellEnd[cellIndex];
+
+                // look from start to end and get the particles that are within this cell
+                for (uint i = start; i < end; ++i)
+                {
+                    uint neighbourIndex = hashes[i].particleIndex;
+                    // Ignore self
+                    if (neighbourIndex == _particleIndex)
+                        continue;
+                    vec3 neighbourPosition = particles[neighbourIndex].position;
+
+                    // Get the relative data of the particles
+                    vec3 delta = neighbourPosition - particlePosition;
+                    float distanceSquared = dot(delta, delta);
+
+                    // if within smothing radius do SPH computation
+                    if (distanceSquared < smoothingRadius * smoothingRadius)
+                    {
+                        numNeighbours++;
+                    }
+                }
+            }
+        }
+    }
+    //float neighbourRatio = clamp(float(numNeighbours) / 25.0, 0.0, 1.0);
+    //neighbourColor = vec3(neighbourRatio, neighbourRatio, neighbourRatio);
+    //neighbourColor = vec3(1.0 - neighbourRatio, neighbourRatio, 0.0);
+    //particles[_particleIndex].color.xyz = neighbourColor;
+}
+
+void main() {
+    int id = GetParticleIndex();
+    if(!WithinBounds(id, particles.length()))
+        return;
+
+    FindNeighbours(id);
+}
+

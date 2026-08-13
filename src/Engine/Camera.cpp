@@ -135,8 +135,3 @@ const float Camera::GetFarplane() const
 {
     return mFarPlane;
 }
-
-const int Camera::GetNumRayChecks() const 
-{
-    return mNumRayChecks;
-}

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <functional>
 #include "Util/SMath.h"
+#include <vector>
 
 class Renderer
 {
 public:
-    using BindParticleStorageBufferCallback = std::function<void()>;
-
     Renderer() = default;
     ~Renderer();
     
@@ -16,24 +14,24 @@ public:
     class Texture* mDisplayTexture = nullptr;
     class Texture* mSkyboxTexture = nullptr;
     class VisShader* mVisShader = nullptr;
-    class ComputeShader* mComputeShader = nullptr;
-    void Init();
-    void Render(const class Camera* _camera, const std::vector<class Object*>& _objects);
+    class SimulationPass* mRaytracePass = nullptr;
+
+    const class Camera* mCameraRef;
+    const std::vector<class Object*>* mObjectsRef;
+
+    void Init(std::vector<struct SSBOBinding> _raytracerResources, const Camera* _camera, const std::vector<class Object*>* _objects);
+    void Render();
 
 private:
-    BindParticleStorageBufferCallback mBindParticleStorageBufferCallback;
-
     void InitBuffers();
-    void InitShaders();
+    void InitShaders(std::vector<struct SSBOBinding> _raytracerResources);
     void InitTextures();
     void GenerateDisplayTexture();
-    void BindCamera(const class Shader* _shader, const class Camera* _camera);
-    void BindObjects(const class Shader* _shader, const std::vector<class Object*>& _objects);
+    void BindCamera(const class Shader* _shader);
+    void BindReferenceObjects(const class Shader* _shader);
     void BindTextures(const class Shader* _shader);
-    void BindSimulations(const class Shader* _shader);
     void BindUniforms(const class Shader* _shader);
 public:
 
     void SetWindowSize(glm::ivec2 _newWindowSize);
-    void SetBindParticleStorageBufferCallback(BindParticleStorageBufferCallback _callback);
 };

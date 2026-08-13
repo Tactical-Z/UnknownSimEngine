@@ -39,12 +39,7 @@ void Engine::Init()
     mUIManager.SetGetSimulationSpeedRefrenceCallback([this]() -> float& { return mSimulationManager.GetSimulationSpeedRef();});
     mUIManager.SetGetPassTimeCallback([this]() -> std::vector<std::pair<const char*, float>> { return mSimulationManager.GetSimulationUIData();});
     // Renderer
-    mRenderer.Init();
-    mRenderer.SetBindParticleStorageBufferCallback([this](){ mSimulationManager.BindParticleBuffer(); });
-
-
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
+    mRenderer.Init(mSimulationManager.GetRaytracerResources(), mCamera, &mObjects);
 }
 
 void Engine::StartFrame()
@@ -62,7 +57,7 @@ void Engine::Update(float _dt)
 
 void Engine::Render()
 {
-    mRenderer.Render(mCamera, mObjects);
+    mRenderer.Render();
     mUIManager.UIDraw();
 }
 

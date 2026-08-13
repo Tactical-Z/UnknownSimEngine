@@ -18,6 +18,9 @@ void WindowManager::Init(const char* _windowName)
     InitGLFW(); // glfw should be engnie wide not window wide. 
     mSettings.mWindowName = _windowName;
     InitWindow();
+    
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 };
 
 void WindowManager::Shutdown()

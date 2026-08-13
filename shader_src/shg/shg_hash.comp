@@ -7,6 +7,7 @@ struct Particle{
     float radius;
     vec3 velocity;
     float mass;
+    vec4 mColor;
 };
 layout (std430, binding = 0)
 buffer particleBuffer {
@@ -41,7 +42,7 @@ uint Hash(ivec3 _c)
     const uint h1 = 79801u;
     const uint h2 = 62548u;
     const uint h3 = 32193u;
-    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hasing.
+    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hashing.
     return uint(_c.x) * h1 ^ uint(_c.y) * h2 ^ uint(_c.z) * h3;
 }
 

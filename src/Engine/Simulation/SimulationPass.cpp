@@ -9,7 +9,7 @@ SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding> 
     mName = PathUtil::GetFilenameWithoutExtension(mSolver->GetSrc());
     GLint size[3];
     glGetProgramiv(mSolver->mId, GL_COMPUTE_WORK_GROUP_SIZE, size);
-    mWorkGroupSize = size[0];
+    mWorkGroupSize = glm::ivec3(size[0],size[1],size[2]);
 
     glGenQueries(1, &mTimeQuery);
 }
@@ -27,8 +27,10 @@ void SimulationPass::Execute()
     UpdateTimer();
     
     glBeginQuery(GL_TIME_ELAPSED, mTimeQuery);
-    uint32_t count = mDispatchCountCallback();
-    uint32_t groups = (count + mWorkGroupSize - 1) / mWorkGroupSize;
+    if(!mDispatchCountCallback)
+        LOG_ERROR("SimulationPass: '{}' does not have valid dispatchCountCallback", mName);
+    glm::ivec3 count = mDispatchCountCallback();
+    glm::ivec3 groups = NumGroups(count);
     mSolver->use();
     BindResources();
     BindUniforms();
@@ -75,9 +77,21 @@ void SimulationPass::BindUniforms()
     }
 }
 
-void SimulationPass::Dispatch(const GLuint& _groupSize)
+glm::ivec3 SimulationPass::NumGroups(glm::ivec3 _count)
 {
-    glDispatchCompute(_groupSize, 1, 1);
+    glm::ivec3 groups = glm::ivec3(1);
+    if(_count.x > 0)
+        groups.x = (_count.x + mWorkGroupSize.x - 1) / mWorkGroupSize.x;
+    if(_count.y > 0)
+        groups.y = (_count.y + mWorkGroupSize.y - 1) / mWorkGroupSize.y;
+    if(_count.z > 0)
+        groups.z = (_count.z + mWorkGroupSize.z - 1) / mWorkGroupSize.z;
+    return groups;
+}
+
+void SimulationPass::Dispatch(const glm::ivec3& _groupSize)
+{
+    glDispatchCompute(GLuint(_groupSize.x), GLuint(_groupSize.y), GLuint(_groupSize.z));
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -105,7 +119,7 @@ ComputeShader* SimulationPass::GetShader()
     return mSolver;
 }
 
-uint32_t SimulationPass::GetWorkGroupSize()
+glm::ivec3 SimulationPass::GetWorkGroupSize()
 {
     return mWorkGroupSize;
 }

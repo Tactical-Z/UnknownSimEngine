@@ -19,7 +19,6 @@ private:
     glm::vec3 mFront = glm::vec3(1.0f, 0.0f, 0.0f);
     float mFOV = 45.0f;
     float mFarPlane = 100.f;
-    int mNumRayChecks = 200;
 
     void UpdateDirectionVectors();
 public:
@@ -42,6 +41,5 @@ public:
     const glm::vec3 GetFront() const;
     const float GetFov() const;
     const float GetFarplane() const;
-    const int GetNumRayChecks() const;
 };
 
