@@ -1,0 +1,9 @@
+
+
+1. Make hashing pipeline finite rather than infinate
+2. Make new dense grid lookup for raytracer
+3. Update raytracer to use the dense grid
+4. Keep optomizing. Goal is 200 fps for 2000 particles
+
+5. Add particle volume
+6. Add gravitational Lensing

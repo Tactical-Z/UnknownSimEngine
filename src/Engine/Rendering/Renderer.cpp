@@ -127,6 +127,8 @@ void Renderer::BindUniforms(const class Shader* _shader)
     _shader->use();
     _shader->setFloat("cellSize", gCellSize);
     _shader->setFloat("particleRadius", gParticleRadius);
+    _shader->setIVec3("gridSize", gGridSize);
+    _shader->setIVec3("gridMin", gGridBoundsMin);
 }
 
 void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){

@@ -4,11 +4,11 @@
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 struct DDARay{
-    ivec3 cell;
-    ivec3 step;
-    vec3 tMax;
-    vec3 tDelta;
-    float t;
+    ivec3 currentCell; // cell ray is in
+    ivec3 stepDirection; // direction of stepping (1 or -1) in each axis
+    vec3 tMax; // Distance to next boundry
+    vec3 tDelta; // Distance between current boundry and new boundry
+    float t; // Distance parameter | pos(t) = origin * direction * t
 };
 
 struct Camera{
@@ -32,15 +32,20 @@ struct Particle{
     float mass;
     vec4 color;
 };
+layout(std430, binding = 0) buffer particleBuffer {Particle particles[];};
 
-struct HashEntry{
-    uint hash;
+struct GridEntry{
+    uint cellIndex;
     uint particleIndex;
 };
+layout(std430, binding = 1) buffer cellEntryBuffer { GridEntry entries[]; };
 
-struct HashLookupEntry{
-    uint hash;
-    uint cellIndex;
+layout(std430, binding = 2) buffer cellStartBuffer { 
+    uint cellStart[];
+};
+
+layout(std430, binding = 3) buffer cellEndBuffer {
+    uint cellEnd[];
 };
 
 // Image binding
@@ -48,17 +53,16 @@ layout (rgba32f, binding = 0) uniform image2D imgOutput;
 // Texture binding
 layout(binding = 0) uniform samplerCube skybox;
 // SSBO binding
-layout(std430, binding = 0) buffer particleBuffer {Particle particles[];};
-layout(std430, binding = 1) buffer hashBuffer { HashEntry hashes[]; };
-layout(std430, binding = 2) buffer cellStartBuffer { uint cellStart[]; };
-layout(std430, binding = 3) buffer cellEndBuffer { uint cellEnd[]; };
-layout(std430, binding = 8) buffer LookupBuffer { HashLookupEntry lookup[]; };
+
 // Uniform binding
 uniform float cellSize;
 uniform float particleRadius;
+uniform ivec3 gridSize;
+uniform vec3 gridMin;
 uniform Camera camera;
 uniform Sphere sphere;
 // Constants
+const uint INVALID = 0xffffffffu;
 vec4 blackHoleColor = vec4(0.0, 0.0, 0.0, 1.0);
 const int cellRadius = int(ceil(particleRadius / cellSize)); // allows for particle radius to be greater than cell size, although expensive
 
@@ -90,17 +94,18 @@ DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
 {
     DDARay dda;
 
-    vec3 p = _rayOrigin / cellSize;
-    dda.cell = ivec3(floor(p));
-    if (_rayDirection.x < 0.0 && fract(p.x) == 0.0)
-        dda.cell.x--;
-    if (_rayDirection.y < 0.0 && fract(p.y) == 0.0)
-        dda.cell.y--;
-    if (_rayDirection.z < 0.0 && fract(p.z) == 0.0)
-        dda.cell.z--;
+    // finds the inital position -> cell of dda checking for landing on axis edge
+    vec3 pos = (_rayOrigin - gridMin) / cellSize;
+    dda.currentCell = ivec3(floor(pos));
+    if (_rayDirection.x < 0.0 && fract(pos.x) == 0.0)
+        dda.currentCell.x--;
+    if (_rayDirection.y < 0.0 && fract(pos.y) == 0.0)
+        dda.currentCell.y--;
+    if (_rayDirection.z < 0.0 && fract(pos.z) == 0.0)
+        dda.currentCell.z--;
 
     // Direction of grid traversal
-    dda.step = ivec3(
+    dda.stepDirection = ivec3(
         _rayDirection.x >= 0.0 ? 1 : -1,
         _rayDirection.y >= 0.0 ? 1 : -1,
         _rayDirection.z >= 0.0 ? 1 : -1
@@ -114,19 +119,20 @@ DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
     );
 
     // Find next grid boundry on each axis
-    vec3 cellMin = vec3(dda.cell) * cellSize;
-    vec3 cellMax = cellMin + cellSize;
-
-    vec3 nextBoundry = vec3(
-        dda.step.x > 0 ? cellMax.x : cellMin.x,
-        dda.step.y > 0 ? cellMax.y : cellMin.y,
-        dda.step.z > 0 ? cellMax.z : cellMin.z
+    vec3 cellMin = gridMin + vec3(dda.currentCell) * cellSize;
+    vec3 cellMax = cellMin + vec3(cellSize);
+    vec3 nextBoundary = vec3(
+        dda.stepDirection.x > 0 ? cellMax.x : cellMin.x,
+        dda.stepDirection.y > 0 ? cellMax.y : cellMin.y,
+        dda.stepDirection.z > 0 ? cellMax.z : cellMin.z
     );
 
+    // this is what usese the ray equation | P(t) = origin + direction * t | re arranged for t -> | t = (nextBoundary.x - origin.x) / direction.x |
+    // depending on what is least, that is the boundry hit
     dda.tMax = vec3(
-        _rayDirection.x != 0.0 ? (nextBoundry.x - _rayOrigin.x) / _rayDirection.x : 1.0 / 0.0,
-        _rayDirection.y != 0.0 ? (nextBoundry.y - _rayOrigin.y) / _rayDirection.y : 1.0 / 0.0,
-        _rayDirection.z != 0.0 ? (nextBoundry.z - _rayOrigin.z) / _rayDirection.z : 1.0 / 0.0
+        _rayDirection.x != 0.0 ? (nextBoundary.x - _rayOrigin.x) / _rayDirection.x : 1.0 / 0.0,
+        _rayDirection.y != 0.0 ? (nextBoundary.y - _rayOrigin.y) / _rayDirection.y : 1.0 / 0.0,
+        _rayDirection.z != 0.0 ? (nextBoundary.z - _rayOrigin.z) / _rayDirection.z : 1.0 / 0.0
     );
 
     dda.t = 0.0;
@@ -136,24 +142,25 @@ DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
 
 void AdvanceDDA(inout DDARay _dda)
 {
+    // checks to find the closest boundry, whichever boundry has the closer axis wins.
     if (_dda.tMax.x <= _dda.tMax.y &&
         _dda.tMax.x <= _dda.tMax.z)
     {
-        _dda.t = _dda.tMax.x;
-        _dda.tMax.x += _dda.tDelta.x;
-        _dda.cell.x += _dda.step.x;
+        _dda.t = _dda.tMax.x; // record crossing position
+        _dda.tMax.x += _dda.tDelta.x; // update max boundry distance
+        _dda.currentCell.x += _dda.stepDirection.x; // update current cell
     }
     else if (_dda.tMax.y <= _dda.tMax.z)
     {
         _dda.t = _dda.tMax.y;
         _dda.tMax.y += _dda.tDelta.y;
-        _dda.cell.y += _dda.step.y;
+        _dda.currentCell.y += _dda.stepDirection.y;
     }
     else
     {
         _dda.t = _dda.tMax.z;
         _dda.tMax.z += _dda.tDelta.z;
-        _dda.cell.z += _dda.step.z;
+        _dda.currentCell.z += _dda.stepDirection.z;
     }
 }
 
@@ -185,6 +192,19 @@ bool RaySphereIntersection(vec3 _rayOrigin, vec3 _rayDirection, Sphere _sphere, 
     
     _hitT = t;
     return true;
+}
+
+bool SphereAABB(vec3 _sCenter, float _sRadius, vec3 _abMin, vec3 _abMax)
+{
+    const float x = max(_abMin.x, min(_sCenter.x, _abMax.x));
+    const float y = max(_abMin.y, min(_sCenter.y, _abMax.y));
+    const float z = max(_abMin.z, min(_sCenter.z, _abMax.z));
+
+    const float dx = _sCenter.x - x;
+    const float dy = _sCenter.y - y;
+    const float dz = _sCenter.z - z;
+
+    return dx * dx + dy * dy + dz * dz <= _sRadius * _sRadius;
 }
 
 bool RayAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _boxMin, vec3 _boxMax, float _tMin, float _tMax)
@@ -219,37 +239,6 @@ vec2 DirectionToUV(vec3 _dir)
     return vec2(u, v);
 }
 
-uint Hash(ivec3 _c)
-{
-    const uint h1 = 79801u;
-    const uint h2 = 62548u;
-    const uint h3 = 32193u;
-    // XOR ^ mixes the bits togeather better than with addition or othewise, good for hashing.
-    return uint(_c.x) * h1 ^ uint(_c.y) * h2 ^ uint(_c.z) * h3;
-}
-
-uint FindCell(uint _hash)
-{
-    uint mask = lookup.length() - 1;
-    uint slot = _hash & mask;
-
-    for (uint probe = 0u; probe < lookup.length(); ++probe)
-    {
-        uint storedHash = lookup[slot].hash;
-
-        // cell does not exist
-        if (storedHash == 0xffffffff)
-            return 0xffffffff;
-
-        // correct cell
-        if (storedHash == _hash)
-            return lookup[slot].cellIndex;
-
-        // Collision, try next
-        slot = (slot + 1) & mask;
-    }
-}
-
 bool FindParticleHit(uint _cellIndex, vec3 _rayOrigin, vec3 _rayDirection, float _tMin, float _tMax, inout float _closestHit, inout uint _closestParticle)
 {
     uint start = cellStart[_cellIndex];
@@ -257,7 +246,7 @@ bool FindParticleHit(uint _cellIndex, vec3 _rayOrigin, vec3 _rayDirection, float
 
     for (uint i = start; i < end; ++i)
     {
-        uint particleIndex = hashes[i].particleIndex;
+        uint particleIndex = entries[i].particleIndex;
 
         if (particleIndex == 0xffffffff)
             continue;
@@ -279,26 +268,24 @@ bool FindParticleHit(uint _cellIndex, vec3 _rayOrigin, vec3 _rayDirection, float
     return _closestParticle != 0xffffffff;
 }
 
-void SearchNeighbourCells(ivec3 centerCell, vec3 rayOrigin, vec3 rayDirection, float tMin, float tMax, inout float closestHit, inout uint closestParticle)
+bool InsideGrid(ivec3 _c)
 {
-    for (int z = -cellRadius; z <= cellRadius; ++z)
-    {
-        for (int y = -cellRadius; y <= cellRadius; ++y)
-        {
-            for (int x = -cellRadius; x <= cellRadius; ++x)
-            {
-                ivec3 cellPosition =centerCell + ivec3(x, y, z);
+    return
+        _c.x >= 0 &&
+        _c.y >= 0 &&
+        _c.z >= 0 &&
+        _c.x < gridSize.x &&
+        _c.y < gridSize.y &&
+        _c.z < gridSize.z;
+}
 
-                uint cellHash = Hash(cellPosition);
-                uint cellIndex = FindCell(cellHash);
-
-                if (cellIndex == 0xffffffffu)
-                    continue;
-
-                FindParticleHit(cellIndex, rayOrigin, rayDirection, tMin, tMax, closestHit, closestParticle);
-            }
-        }
-    }
+uint GridIndex(ivec3 _c)
+{
+    return uint(
+        _c.x +
+        _c.y * gridSize.x +
+        _c.z * gridSize.x * gridSize.y
+    );
 }
 
 void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
@@ -335,7 +322,7 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
 
     if (blackHoleHit)
         rayEnd = min(rayEnd, blackHoleT);
-
+    vec3 skyBoxColour = texture(skybox, rayDirection).rgb;  
     // Traverse grid
     // --------------------
     while (dda.t < rayEnd)
@@ -343,14 +330,29 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
         float cellExitT = min(dda.tMax.x, min(dda.tMax.y, dda.tMax.z));
         cellExitT = min(cellExitT, rayEnd);
 
-
+        
         // Search current + neighbouring cells
         // -------------------------------------
         float closestHit = cellExitT;
         uint closestParticle = 0xffffffff;
+        //SearchNeighbourCells(dda.currentCell, rayOrigin, rayDirection, dda.t, cellExitT, closestHit, closestParticle);
+        
+        ivec3 cell = dda.currentCell;
 
-        SearchNeighbourCells(dda.cell, rayOrigin, rayDirection, dda.t, cellExitT, closestHit, closestParticle);
+        if (!InsideGrid(cell))
+        {
+            // ray left simulation volume
+            break;
+        }
 
+        uint cellIndex = GridIndex(cell);
+        uint start = cellStart[cellIndex];
+
+        if (start != INVALID)
+        {
+            imageStore(imgOutput, _texelCord, vec4(skyBoxColour, 1.0));
+            FindParticleHit(cellIndex, rayOrigin, rayDirection, dda.t, cellExitT, closestHit, closestParticle);
+        }
 
         // Particle hit
         // -------------------
@@ -381,8 +383,8 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
         return;
     }
 
-    vec3 skyBoxColour = texture(skybox, rayDirection).rgb;
-    imageStore(imgOutput, _texelCord, vec4(skyBoxColour, 1.0));
+    //vec3 skyBoxColour = texture(skybox, rayDirection).rgb;
+    //imageStore(imgOutput, _texelCord, vec4(skyBoxColour, 1.0));
 }
 
 void main() {

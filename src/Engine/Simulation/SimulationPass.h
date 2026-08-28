@@ -10,9 +10,9 @@ class SimulationPass
 public:
     SimulationPass() = default;
     SimulationPass(class ComputeShader* _shader, 
-                    std::vector<SSBOBinding> _resources, 
+                    std::vector<SSBOBinding>& _resources, 
                     DispatchCallback _dispatchCountCallback, 
-                    std::vector<UniformCallback> _uniforms,
+                    std::vector<UniformCallback>& _uniforms,
                     ExecuteCallback _execute = nullptr);
     ~SimulationPass();
     void Execute();

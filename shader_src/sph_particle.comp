@@ -132,16 +132,16 @@ void FindNeighbours(uint _particleIndex)
                     // if within smothing radius do SPH computation
                     if (distanceSquared < smoothingRadius * smoothingRadius)
                     {
-                        numNeighbours++;
+                        numNeighbours++; // SPH GOES HERE
                     }
                 }
             }
         }
     }
-    //float neighbourRatio = clamp(float(numNeighbours) / 25.0, 0.0, 1.0);
-    //neighbourColor = vec3(neighbourRatio, neighbourRatio, neighbourRatio);
+    float neighbourRatio = clamp(float(numNeighbours) / 5.0, 0.0, 1.0);
+    neighbourColor = vec3(neighbourRatio, neighbourRatio, neighbourRatio);
     //neighbourColor = vec3(1.0 - neighbourRatio, neighbourRatio, 0.0);
-    //particles[_particleIndex].color.xyz = neighbourColor;
+    particles[_particleIndex].color.xyz = neighbourColor;
 }
 
 void main() {

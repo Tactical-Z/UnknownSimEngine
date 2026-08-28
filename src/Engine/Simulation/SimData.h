@@ -9,16 +9,17 @@ using UniformCallback = std::function<void(class Shader*)>;
 using DispatchCallback = std::function<glm::ivec3()>;
 using ExecuteCallback = std::function<void(class SimulationPass*, glm::ivec3, glm::ivec3)>; // for custom execution code
 
+// Todo: make global buffers, like 1 flag 1 hash 1 start and so on
 enum class BindingLocation{
-    BL_PARTICLE_BUFFER,
-    BL_SHG_HASH_BUFFER,
-    BL_SHG_START_BUFFER,
-    BL_SHG_END_BUFFER,
-    BL_SHG_CELL_COUNT_BUFFER,
-    BL_SHG_UNIQUE_HASH_BUFFER,
-    BL_SHG_CELL_FLAG_BUFFER,
-    BL_SHG_CELL_PREFIX_BUFFER,
-    BL_SHG_HASH_LOOKUP_BUFFER
+    BL_PARTICLE_BUFFER = 0,
+    BL_HASH_ENTRY_BUFFER = 1,
+    BL_RANGE_START_BUFFER = 2,
+    BL_RANGE_END_BUFFER = 3,
+    BL_COUNT_BUFFER = 4,
+    BL_SHG_UNIQUE_HASH_BUFFER = 5,
+    BL_FLAG_BUFFER = 6,
+    BL_PREFIX_BUFFER = 7,
+    BL_SHG_HASH_LOOKUP_BUFFER = 8,
 };
 
 struct SSBOBinding{

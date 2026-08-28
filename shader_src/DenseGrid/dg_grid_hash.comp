@@ -1,0 +1,77 @@
+#version 450 core
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+    float mass;
+    vec4 mColor;
+};
+layout (std430, binding = 0) readonly buffer particleBuffer {
+    Particle particles[];
+};
+
+struct GridEntry{
+    uint cellIndex;
+    uint particleIndex;
+};
+layout(std430, binding = 1) writeonly buffer entryBuffer {
+    GridEntry entries[];
+};
+
+const uint INVALID = 0xffffffffu;
+uniform int activeCount;
+uniform float cellSize;
+uniform vec3 gridMin;
+uniform ivec3 gridSize;
+
+int GetParticleIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+bool InsideGrid(ivec3 _c)
+{
+    return
+        _c.x >= 0 &&
+        _c.y >= 0 &&
+        _c.z >= 0 &&
+        _c.x < gridSize.x &&
+        _c.y < gridSize.y &&
+        _c.z < gridSize.z;
+}
+
+uint GridIndex(ivec3 _c)
+{
+    return uint(
+        _c.x +
+        _c.y * gridSize.x +
+        _c.z * gridSize.x * gridSize.y
+    );
+}
+
+void main() {
+    int id = GetParticleIndex();
+    if(!WithinBounds(id, activeCount))
+        return;
+
+    ivec3 cell = ivec3(floor((particles[id].position - gridMin) / cellSize));
+    
+    if (!InsideGrid(cell))
+    {
+        entries[id].cellIndex = INVALID;
+        entries[id].particleIndex = INVALID;
+        return;
+    }
+
+    entries[id].cellIndex = GridIndex(cell);
+    entries[id].particleIndex = id;
+}

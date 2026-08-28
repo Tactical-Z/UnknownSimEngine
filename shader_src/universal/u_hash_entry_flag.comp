@@ -4,23 +4,21 @@ layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
 
 struct HashEntry{
     uint hash;
-    uint particleIndex;
+    uint index;
 };
-layout(std430, binding = 1)
-buffer hashBuffer {
-    HashEntry hashes[];
+layout(std430, binding = 1) readonly buffer entryBuffer {
+    HashEntry hashEntrys[];
 };
 
-layout(std430, binding = 6)
-buffer cellFlagBuffer {
+layout(std430, binding = 6) writeonly buffer cellFlagBuffer {
     uint cellFlags[];
 };
 
-layout(std430, binding = 7)
-buffer cellPrefixBuffer {
-    uint cellScan[];
+layout(std430, binding = 7) writeonly buffer cellPrefixBuffer {
+    uint cellPrefixes[];
 };
 
+const uint INVALID = 0xffffffffu;
 uniform int activeCount;
 
 int GetIndex()
@@ -43,18 +41,18 @@ void main() {
     
     if(!WithinBounds(id, activeCount)){
         cellFlags[id] = 0;
-        cellScan[id] = 0;
+        cellPrefixes[id] = 0;
         return;
     }
 
-    if(id == 0 || hashes[id].hash != hashes[id-1].hash)
+    if(id == 0 || hashEntrys[id].hash != hashEntrys[id-1].hash)
     {
         cellFlags[id] = 1;
-        cellScan[id] = 1;
+        cellPrefixes[id] = 1;
     }
     else
     {
         cellFlags[id] = 0;
-        cellScan[id] = 0;
+        cellPrefixes[id] = 0;
     }
 }

@@ -16,16 +16,27 @@ public:
     void BindBuffer(GLint _bufferID, int _layout);
 
 private:
-    // GPU buffers
+    // --- GPU buffers ---
     GPUBuffer<Particle> mParticleBuffer;
+    
+    // SPH Buffers
     GPUBuffer<HashEntry> mHashBuffer;
     GPUBuffer<uint32_t> mCellFlagBuffer;
     GPUBuffer<uint32_t> mCellPrefixBuffer;
+    GPUBuffer<uint32_t> mCellCountBuffer;
     GPUBuffer<uint32_t> mCellStartBuffer;
     GPUBuffer<uint32_t> mCellEndBuffer;
-    GPUBuffer<uint32_t> mCellCountBuffer;
     GPUBuffer<uint32_t> mUniqueHashBuffer;
-    GPUBuffer<HashLookupEntry> mHashLookupBuffer;
+    GPUBuffer<HashEntry> mHashLookupBuffer;
+
+    // Render Buffers
+    GPUBuffer<HashEntry> mRenderGridBuffer;
+    GPUBuffer<uint32_t> mRenderCellFlagBuffer;
+    GPUBuffer<uint32_t> mRenderCellPrefixBuffer;
+    GPUBuffer<uint32_t> mRenderCellCountBuffer;
+    GPUBuffer<uint32_t> mRenderCellStartBuffer;
+    GPUBuffer<uint32_t> mRenderCellEndBuffer;
+    
 
     void InitBuffers();
 
@@ -72,15 +83,26 @@ private:
     void CreateGravityPipeline();
     void CreateSHGPipeline();
     void CreateSPHPipeline();
+    void CreateDGPipeline();
+
+    // Helper pipeline creation functions
+    void CreateBitonicSortPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer);
+    void CreateFlagPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer, GPUBuffer<uint32_t>& _flagBuffer, GPUBuffer<uint32_t>& _prefixBuffer);
+    void CreateBlellochScanPass(SimulationPipeline* _pipeline, GPUBuffer<uint32_t>& _prefixBuffer, GPUBuffer<uint32_t>& _countBuffer);
 
     // Binding functions for callback
+    void BindCallback(class Shader* _shader, const char* _varName, unsigned int _val);
+    void BindCallback(class Shader* _shader, const char* _varName, int _val);
+    void BindCallback(class Shader* _shader, const char* _varName, float _val);
+    void BindCallback(class Shader* _shader, const char* _varName, glm::ivec3 _val);
+    void BindCallback(class Shader* _shader, const char* _varName, glm::vec3 _val);
     void BindDTCallback(class Shader* _shader);
     void BindCCallback(class Shader* _shader);
     void BindGCallback(class Shader* _shader);
     void BindSCallback(class Shader* _shader);
     void BindActiveCountCallback(class Shader* _shader);
     void BindRefObjCallback(class Shader* _shader);  
-    void BindSHGCellSizeCallback(class Shader* _shader);
+    void BindCellSizeCallback(class Shader* _shader);
     void BindSPHSmoothingRadius(class Shader* _shader);
 
     

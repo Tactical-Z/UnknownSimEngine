@@ -3,7 +3,7 @@
 #include "Util/Path.h"
 #include "Util/Log.h"
 
-SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding> _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback> _uniforms, ExecuteCallback _execute)
+SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding>& _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback>& _uniforms, ExecuteCallback _execute)
     :   mSolver(_shader), mResources(_resources), mDispatchCountCallback(_dispatchCountCallback), mUniforms(_uniforms), mExecuteCallback(_execute)
 {
     mName = PathUtil::GetFilenameWithoutExtension(mSolver->GetSrc());

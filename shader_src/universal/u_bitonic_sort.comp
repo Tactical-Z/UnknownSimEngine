@@ -4,14 +4,13 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 struct HashEntry{
     uint hash;
-    uint particleIndex;
+    uint index;
 };
-layout(std430, binding = 1)
-buffer hashBuffer {
-    HashEntry hashes[];
+layout(std430, binding = 1) buffer entryBuffer {
+    HashEntry hashEntrys[];
 };
 
-uniform int activeCount;
+const uint INVALID = 0xffffffffu;
 uniform int k;
 uniform int j;
 
@@ -29,7 +28,7 @@ bool WithinBounds(int _id, int _count){
 void main() {
     
     int id = GetIndex();
-    if(!WithinBounds(id, hashes.length()))
+    if(!WithinBounds(id, hashEntrys.length()))
         return;
 
     // Useses bitwise XOR to find partner
@@ -37,8 +36,6 @@ void main() {
     // Exmaple j = 4 = 0100
     // Exmaple partner = 1 = 0001
     int partner = id ^ j; 
-    //if(!WithinBounds(partner, activeCount))
-    //    return;
 
     // end early if overlappign sort, 4 sort with 0 and 0 sort with 4, so lower bounds is droped.
     if(id > partner)
@@ -49,16 +46,16 @@ void main() {
 
     if(ascending)
     {
-        if(hashes[id].hash > hashes[partner].hash){
-            HashEntry temp = hashes[id];
-            hashes[id] = hashes[partner];
-            hashes[partner] = temp;
+        if(hashEntrys[id].hash > hashEntrys[partner].hash){
+            HashEntry temp = hashEntrys[id];
+            hashEntrys[id] = hashEntrys[partner];
+            hashEntrys[partner] = temp;
         }
     } else {
-        if(hashes[id].hash < hashes[partner].hash){
-            HashEntry temp = hashes[id];
-            hashes[id] = hashes[partner];
-            hashes[partner] = temp;
+        if(hashEntrys[id].hash < hashEntrys[partner].hash){
+            HashEntry temp = hashEntrys[id];
+            hashEntrys[id] = hashEntrys[partner];
+            hashEntrys[partner] = temp;
         }
     }
 

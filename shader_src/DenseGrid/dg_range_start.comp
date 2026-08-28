@@ -1,0 +1,80 @@
+#version 450 core
+
+layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+
+struct HashEntry
+{
+    uint hash;
+    uint index;
+};
+layout(std430, binding = 1) readonly buffer EntryBuffer
+{
+    HashEntry entries[];
+};
+
+layout(std430, binding = 2) writeonly buffer CellStartBuffer
+{
+    uint cellStart[];
+};
+
+layout(std430, binding = 3) writeonly buffer CellEndBuffer
+{
+    uint cellEnd[];
+};
+
+layout(std430, binding = 6) readonly buffer FlagBuffer
+{
+    uint flags[];
+};
+
+layout(std430, binding = 7) readonly buffer PrefixBuffer
+{
+    uint prefix[];
+};
+
+uniform int activeCount;
+const uint INVALID = 0xffffffffu;
+
+int GetIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+void main()
+{
+    int id = GetIndex();
+
+    if (!WithinBounds(id, activeCount))
+        return;
+
+    if (flags[id] == 0)
+        return;
+
+    uint cell = entries[id].hash;
+    uint start = prefix[id];
+
+    // Beginning of a cell
+    if (flags[id] == 1u)
+    {
+        uint cell = entries[id].hash;
+        cellStart[cell] = prefix[id];
+    }
+
+    // End of a cell
+    //
+    // Current entry is the last entry if:
+    //  - it is the final entry, OR
+    //  - the next entry starts another cell.
+    if (id == uint(activeCount - 1) ||
+        flags[id + 1] == 1u)
+    {
+        uint cell = entries[id].hash;
+        cellEnd[cell] = prefix[id] + 1u;
+    }
+}
