@@ -45,12 +45,12 @@ void SimulationManager::Update(float _dt)
         pipline->ExecutePipeline();
     }
 
-    // LOG_WARNING("CellEntries: ");
-    // auto grid = ReadBuffer(mRenderGridBuffer);
-    // for(uint32_t i = 0; i < grid.size(); i++)
-    // {
-    //     LOG_DEBUG("Index: {}, cellIndex: {}, particleIndex: {}", i, grid[i].mHash, grid[i].mIndex);
-    // }
+    //LOG_WARNING("CellEntries: ");
+    //auto grid = ReadBuffer(mRenderGridBuffer);
+    //for(uint32_t i = 0; i < grid.size(); i++)
+    //{
+    //    LOG_DEBUG("Index: {}, cellIndex: {}, particleIndex: {}", i, grid[i].mHash, grid[i].mIndex);
+    //}
 
     // LOG_WARNING("Hashes: ");
     // auto hashes = ReadBuffer(mHashBuffer);
@@ -116,7 +116,7 @@ void SimulationManager::Update(float _dt)
     // {
     //     LOG_DEBUG("Index: {}, Hash: {}, cell: {}", i, table[i].hash, table[i].cellIndex);
     // }
-    // LOG_DEBUG("End");
+    //LOG_DEBUG("End");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)

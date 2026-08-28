@@ -63,7 +63,9 @@ uniform Camera camera;
 uniform Sphere sphere;
 // Constants
 const uint INVALID = 0xffffffffu;
+const float INF = 1e30;
 vec4 blackHoleColor = vec4(0.0, 0.0, 0.0, 1.0);
+vec4 outSideSimulationGrid = vec4(1,0,0,1);
 const int cellRadius = int(ceil(particleRadius / cellSize)); // allows for particle radius to be greater than cell size, although expensive
 
 bool PixelIsInput(vec2 _pixel, vec2 _position)
@@ -113,9 +115,9 @@ DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
 
     // Distance along ray between boundries
     dda.tDelta = vec3(
-        _rayDirection.x != 0.0 ? abs(cellSize / _rayDirection.x) : 1.0 / 0.0,
-        _rayDirection.y != 0.0 ? abs(cellSize / _rayDirection.y) : 1.0 / 0.0,
-        _rayDirection.z != 0.0 ? abs(cellSize / _rayDirection.z) : 1.0 / 0.0
+        _rayDirection.x != 0.0 ? abs(cellSize / _rayDirection.x) : 1.0 / INF,
+        _rayDirection.y != 0.0 ? abs(cellSize / _rayDirection.y) : 1.0 / INF,
+        _rayDirection.z != 0.0 ? abs(cellSize / _rayDirection.z) : 1.0 / INF
     );
 
     // Find next grid boundry on each axis
@@ -130,9 +132,9 @@ DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
     // this is what usese the ray equation | P(t) = origin + direction * t | re arranged for t -> | t = (nextBoundary.x - origin.x) / direction.x |
     // depending on what is least, that is the boundry hit
     dda.tMax = vec3(
-        _rayDirection.x != 0.0 ? (nextBoundary.x - _rayOrigin.x) / _rayDirection.x : 1.0 / 0.0,
-        _rayDirection.y != 0.0 ? (nextBoundary.y - _rayOrigin.y) / _rayDirection.y : 1.0 / 0.0,
-        _rayDirection.z != 0.0 ? (nextBoundary.z - _rayOrigin.z) / _rayDirection.z : 1.0 / 0.0
+        _rayDirection.x != 0.0 ? (nextBoundary.x - _rayOrigin.x) / _rayDirection.x : 1.0 / INF,
+        _rayDirection.y != 0.0 ? (nextBoundary.y - _rayOrigin.y) / _rayDirection.y : 1.0 / INF,
+        _rayDirection.z != 0.0 ? (nextBoundary.z - _rayOrigin.z) / _rayDirection.z : 1.0 / INF
     );
 
     dda.t = 0.0;
@@ -207,7 +209,7 @@ bool SphereAABB(vec3 _sCenter, float _sRadius, vec3 _abMin, vec3 _abMax)
     return dx * dx + dy * dy + dz * dz <= _sRadius * _sRadius;
 }
 
-bool RayAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _boxMin, vec3 _boxMax, float _tMin, float _tMax)
+bool RayAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _boxMin, vec3 _boxMax, float _tMin, float _tMax, out float _hitNear, out float _hitFar)
 {
     vec3 invDir = 1.0 / _rayDirection;
 
@@ -217,18 +219,20 @@ bool RayAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _boxMin, vec3 _boxMax, fl
     vec3 tNear = min(t0, t1);
     vec3 tFar  = max(t0, t1);
 
-    float nearT = max(_tMin, max(tNear.x, max(tNear.y, tNear.z)));
-    float farT  = min(_tMax, min(tFar.x, min(tFar.y, tFar.z)));
+    _hitNear = max(_tMin, max(tNear.x, max(tNear.y, tNear.z)));
+    _hitFar  = min(_tMax, min(tFar.x, min(tFar.y, tFar.z)));
 
-    return nearT <= farT;
+    return _hitNear <= _hitFar;
 }
 
 bool RayCapsuleAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _cellMin, vec3 _cellMax, float _tMin, float _tMax, float _radius)
 {
     _cellMin -= vec3(_radius);
     _cellMax += vec3(_radius);
+    float near;
+    float far;
 
-    return RayAABB(_rayOrigin, _rayDirection, _cellMin, _cellMax, _tMin, _tMax);
+    return RayAABB(_rayOrigin, _rayDirection, _cellMin, _cellMax, _tMin, _tMax, near, far);
 }
 
 vec2 DirectionToUV(vec3 _dir)
@@ -312,9 +316,24 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
     float blackHoleT;
     bool blackHoleHit = RaySphereIntersection(rayOrigin, rayDirection, sphere, 0.0, _camera.maxRayLength, blackHoleT);
 
+    // Inside visualization grid check
+    // -----------------------
+    float gridEntryT;
+    float gridExitT;
+    vec3 gridMax = gridMin + vec3(gridSize) * cellSize;
+    if (!RayAABB(rayOrigin, rayDirection, gridMin, gridMax, 0.0, camera.maxRayLength, gridEntryT, gridExitT))
+    {
+        // Ray doesn't intersect simulation volume.
+        if (blackHoleHit)
+            imageStore(imgOutput, _texelCord, blackHoleColor);
+
+        imageStore(imgOutput, _texelCord, outSideSimulationGrid);
+        return;
+    }
+
+
     // DDA initialization
     // -----------------------
-
     DDARay dda = InitDDA(rayOrigin, rayDirection);
 
     // Don't search beyond black hole
@@ -322,7 +341,7 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
 
     if (blackHoleHit)
         rayEnd = min(rayEnd, blackHoleT);
-    vec3 skyBoxColour = texture(skybox, rayDirection).rgb;  
+    
     // Traverse grid
     // --------------------
     while (dda.t < rayEnd)
@@ -350,6 +369,7 @@ void Raytrace(const Camera _camera, vec2 _imageSize, ivec2 _texelCord, vec2 _uv)
 
         if (start != INVALID)
         {
+            vec3 skyBoxColour = texture(skybox, rayDirection).rgb;
             imageStore(imgOutput, _texelCord, vec4(skyBoxColour, 1.0));
             FindParticleHit(cellIndex, rayOrigin, rayDirection, dda.t, cellExitT, closestHit, closestParticle);
         }

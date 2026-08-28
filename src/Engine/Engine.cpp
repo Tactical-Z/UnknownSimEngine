@@ -23,7 +23,7 @@ void Engine::Init()
     Logger::Set(&mLogger);
 
     // Objects
-    mCamera = new Camera(glm::vec3(-20,0,20), -45.f, 0.f);
+    mCamera = new Camera(glm::vec3(-5,0,0), 0, 0.f);
     mObjects.push_back(new BlackHole((gGridBoundsMin + gGridBoundsMax), 2.0f));
     // Window
     const char* windowName = "Black Hole Simulation";
