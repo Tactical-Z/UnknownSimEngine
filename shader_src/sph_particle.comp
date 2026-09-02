@@ -1,6 +1,6 @@
 #version 450 core
 
-layout (local_size_x = 10, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle{
     vec3 position;
@@ -70,10 +70,11 @@ uint Hash(ivec3 _c)
 
 uint FindCell(uint _hash)
 {
+    uint capacity = lookup.length();
     uint mask = lookup.length() - 1;
     uint slot = _hash & mask;
 
-    while (true)
+    for (uint probe = 0; probe < capacity; ++probe)
     {
         uint storedHash = lookup[slot].hash;
 

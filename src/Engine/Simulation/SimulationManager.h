@@ -39,7 +39,8 @@ private:
     
 
     void InitBuffers();
-
+  
+    // Debug--
     template<typename T>
     std::vector<T> ReadBuffer(GPUBuffer<T>& _buffer)
     {
@@ -64,6 +65,7 @@ private:
 
         return data;
     }
+    void ValidateRenderGrid(); // Honorable Hail mary function, forever imortalized for solving the fucked range bug for dense render grid.
 
     // Simulation
     std::vector<class SimulationPipeline*> mPipelines;

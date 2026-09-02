@@ -1,6 +1,6 @@
 #version 450 core
 
-layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle{
     vec3 position;
@@ -60,8 +60,15 @@ uint GridIndex(ivec3 _c)
 
 void main() {
     int id = GetParticleIndex();
-    if(!WithinBounds(id, activeCount))
+    // if(!WithinBounds(id, activeCount))
+    //     return;
+    if (!WithinBounds(id, activeCount))
+    {
+        entries[id].cellIndex = INVALID;
+        entries[id].particleIndex = INVALID;
         return;
+    }
+
 
     ivec3 cell = ivec3(floor((particles[id].position - gridMin) / cellSize));
     

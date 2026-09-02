@@ -62,8 +62,9 @@ void Renderer::InitBuffers()
 void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
 {
     mVisShader = new VisShader(PathUtil::shader_dir("general.vert"), PathUtil::shader_dir("general.frag"));
-    
-    ComputeShader* rayTraceComputeShader = new ComputeShader(PathUtil::shader_dir("general.comp"));
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT;
+
+    ComputeShader* rayTraceComputeShader = new ComputeShader(PathUtil::shader_dir("ray_tracer.comp"));
     std::vector<SSBOBinding> rayTraceResources = _raytracerResources;
     DispatchCallback rayTraceDispatchCountCallback = [this](){ return glm::ivec3(mWindowSize.x, mWindowSize.y, 1); };
     UniformCallback rayTraceTextureCallback = [this](Shader* _shader){ BindTextures(_shader); };
@@ -71,7 +72,7 @@ void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
     UniformCallback rayTraceRefObjectsCallback = [this](Shader* _shader){ BindReferenceObjects(_shader); };
     UniformCallback rayTraceUniformsCallback = [this](Shader* _shader){ BindUniforms(_shader); };
     std::vector<UniformCallback> rayTraceUniforms = {rayTraceTextureCallback, rayTraceCameraCallback, rayTraceRefObjectsCallback, rayTraceUniformsCallback};
-    mRaytracePass = new SimulationPass(rayTraceComputeShader, rayTraceResources, rayTraceDispatchCountCallback, rayTraceUniforms);
+    mRaytracePass = new SimulationPass(rayTraceComputeShader, rayTraceResources, rayTraceDispatchCountCallback, rayTraceUniforms, passFlag);
 }
 
 void Renderer::InitTextures()
@@ -104,8 +105,8 @@ void Renderer::BindReferenceObjects(const Shader* _shader)
     for (Object* object : *mObjectsRef){
         BlackHole* blackHole = dynamic_cast<BlackHole*>(object);
         if(blackHole){
-            _shader->setVec3("sphere.position", blackHole->GetPosition());
-            _shader->setFloat("sphere.radius", blackHole->GetRadius());
+            _shader->setVec3("bh.position", blackHole->GetPosition());
+            _shader->setFloat("bh.radius", blackHole->GetRadius());
         }
         else {
             LOG_WARNING("No Black hole detected");
@@ -128,7 +129,8 @@ void Renderer::BindUniforms(const class Shader* _shader)
     _shader->setFloat("cellSize", gCellSize);
     _shader->setFloat("particleRadius", gParticleRadius);
     _shader->setIVec3("gridSize", gGridSize);
-    _shader->setIVec3("gridMin", gGridBoundsMin);
+    _shader->setVec3("gridMin", gGridBoundsMin);
+    _shader->setVec3("gridMax", gGridBoundsMax);
 }
 
 void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){

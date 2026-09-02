@@ -3,8 +3,8 @@
 #include "Util/Path.h"
 #include "Util/Log.h"
 
-SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding>& _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback>& _uniforms, ExecuteCallback _execute)
-    :   mSolver(_shader), mResources(_resources), mDispatchCountCallback(_dispatchCountCallback), mUniforms(_uniforms), mExecuteCallback(_execute)
+SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding>& _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback>& _uniforms, unsigned int _memoryBarrierFlag, ExecuteCallback _execute)
+    :   mSolver(_shader), mResources(_resources), mDispatchCountCallback(_dispatchCountCallback), mUniforms(_uniforms), mMemoryBarrierFlags(_memoryBarrierFlag), mExecuteCallback(_execute)
 {
     mName = PathUtil::GetFilenameWithoutExtension(mSolver->GetSrc());
     GLint size[3];
@@ -92,7 +92,7 @@ glm::ivec3 SimulationPass::NumGroups(glm::ivec3 _count)
 void SimulationPass::Dispatch(const glm::ivec3& _groupSize)
 {
     glDispatchCompute(GLuint(_groupSize.x), GLuint(_groupSize.y), GLuint(_groupSize.z));
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glMemoryBarrier(mMemoryBarrierFlags);
 }
 
 bool SimulationPass::IsEnabled()

@@ -13,6 +13,7 @@ public:
                     std::vector<SSBOBinding>& _resources, 
                     DispatchCallback _dispatchCountCallback, 
                     std::vector<UniformCallback>& _uniforms,
+                    unsigned int _memoryBarrierFlag = 0,
                     ExecuteCallback _execute = nullptr);
     ~SimulationPass();
     void Execute();
@@ -25,6 +26,7 @@ private:
     glm::ivec3 mWorkGroupSize;
     std::vector<SSBOBinding> mResources;
     std::vector<UniformCallback> mUniforms;
+    unsigned int mMemoryBarrierFlags;
     ExecuteCallback mExecuteCallback;
     bool mIsEnabled = true;
     GLuint mTimeQuery = 0;

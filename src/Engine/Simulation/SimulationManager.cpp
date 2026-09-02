@@ -45,78 +45,13 @@ void SimulationManager::Update(float _dt)
         pipline->ExecutePipeline();
     }
 
-    //LOG_WARNING("CellEntries: ");
-    //auto grid = ReadBuffer(mRenderGridBuffer);
-    //for(uint32_t i = 0; i < grid.size(); i++)
-    //{
-    //    LOG_DEBUG("Index: {}, cellIndex: {}, particleIndex: {}", i, grid[i].mHash, grid[i].mIndex);
-    //}
-
-    // LOG_WARNING("Hashes: ");
-    // auto hashes = ReadBuffer(mHashBuffer);
-    // for(uint32_t i = 0; i < hashes.size(); i++)
+    //ValidateRenderGrid();
+    // LOG_WARNING("Particles: ");
+    // auto particles = ReadBuffer(mParticleBuffer);
+    // for(uint32_t i = 0; i < particles.size(); i++)
     // {
-    //     LOG_DEBUG("Inex: {}, Hash: {}, particleIndex: {}", i, hashes[i].hash,hashes[i].particleIndex);
+    //     LOG_DEBUG("Index: {}, particle pos .x: {} .y:{} .z;{}", i, particles[i].mPosition.x, particles[i].mPosition.y, particles[i].mPosition.z);
     // }
-
-    // LOG_WARNING("Flag buffer: ");
-    // auto flag = ReadBuffer(mCellFlagBuffer);
-    // for(uint32_t i = 0; i < flag.size(); i++)
-    // {
-    //     LOG_DEBUG("Inex: {}, flag: {}", i, flag[i]);
-    // }
-
-    // LOG_WARNING("Flag buffer: ");
-    // auto flag = ReadBuffer(mRenderCellFlagBuffer);
-    // for(uint32_t i = 0; i < flag.size(); i++)
-    // {
-    //     LOG_DEBUG("Index: {}, flag: {}", i, flag[i]);
-    // }
-   
-    // LOG_WARNING("Prefix buffer: ");
-    // auto prefix = ReadBuffer(mCellPrefixBuffer);
-    // for(uint32_t i = 0; i < prefix.size(); i++)
-    // {
-    //     LOG_DEBUG("Inex: {}, prefix: {}", i, prefix[i]);
-    // }
-    // LOG_WARNING("Prefix buffer: ");
-    // auto prefix = ReadBuffer(mRenderCellPrefixBuffer);
-    // for(uint32_t i = 0; i < prefix.size(); i++)
-    // {
-    //     LOG_DEBUG("Index: {}, prefix: {}", i, prefix[i]);
-    // }
-    // LOG_WARNING("End");
-    // LOG_WARNING("CellStart: ");
-    // auto cellStart = ReadBuffer(mCellStartBuffer);
-    // for(uint32_t i = 0; i < cellStart.size(); i++)
-    // {
-    //     LOG_DEBUG("Inex: {}, cellStart: {}", i, cellStart[i]);
-    // }
-
-    // LOG_WARNING("Cell End: ");
-    // auto cellEnd = ReadBuffer(mCellEndBuffer);
-    // for(uint32_t i = 0; i < cellEnd.size(); i++)
-    // {
-    //     LOG_DEBUG("Inex: {}, cellEnd: {}", i, cellEnd[i]);
-    // }
-
-    // LOG_WARNING("Unique Hashes: ");
-    // auto uniqeHash = ReadBuffer(mUniqueHashBuffer);
-    // for(uint32_t i = 0; i < uniqeHash.size(); i++)
-    // {
-    //     LOG_DEBUG("Inex: {}, uniqe hash: {}", i, uniqeHash[i]);
-    // }
-    
-    // auto count = ReadBuffer(mCellCountBuffer);
-    // LOG_WARNING("Num cells: {}", count[0]);
-    
-    // LOG_WARNING("Lookuptable: ");
-    // auto table = ReadBuffer(mHashLookupBuffer);
-    // for(uint32_t i = 0; i < table.size(); i++)
-    // {
-    //     LOG_DEBUG("Index: {}, Hash: {}, cell: {}", i, table[i].hash, table[i].cellIndex);
-    // }
-    //LOG_DEBUG("End");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
@@ -203,7 +138,7 @@ void SimulationManager::InitBuffers()
 
     mHashLookupBuffer.mBindingLocation = BindingLocation::BL_SHG_HASH_LOOKUP_BUFFER;
     mHashLookupBuffer.mActiveCount = mHashBuffer.mActiveCount;
-    mHashLookupBuffer.mTotalCount = mHashBuffer.mTotalCount;
+    mHashLookupBuffer.mTotalCount = std::bit_ceil(mHashBuffer.mActiveCount * 2);
     mHashLookupBuffer.mBufferData.resize(mHashLookupBuffer.mTotalCount);
     for(uint32_t i = 0; i < mHashLookupBuffer.mTotalCount; i++)
     {
@@ -306,6 +241,7 @@ void SimulationManager::GenerateAccretionDiskParticles()
 void SimulationManager::CreateGravityPipeline()
 {
     SimulationPipeline* gravityPipeline = new SimulationPipeline("Gravity Pipeline");
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
     ComputeShader* gravityComputeShader = new ComputeShader(PathUtil::shader_dir("accretionDiskGravSolver.comp"));
     std::vector<SSBOBinding> resources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId)};
@@ -314,7 +250,7 @@ void SimulationManager::CreateGravityPipeline()
     UniformCallback dtCallback = [this](Shader* _shader){ BindDTCallback(_shader); };
     UniformCallback GCallback = [this](Shader* _shader){ BindGCallback(_shader); };
     std::vector<UniformCallback> uniforms = {RefObjCallback, dtCallback, GCallback};
-    SimulationPass* pass = new SimulationPass(gravityComputeShader, resources, DispatchCountCallback, uniforms);
+    SimulationPass* pass = new SimulationPass(gravityComputeShader, resources, DispatchCountCallback, uniforms, passFlag);
     gravityPipeline->AddPass(pass);
 
     mPipelines.push_back(gravityPipeline);
@@ -323,6 +259,7 @@ void SimulationManager::CreateGravityPipeline()
 void SimulationManager::CreateSHGPipeline()
 {
     SimulationPipeline* shgPipeline = new SimulationPipeline("SHG Pipeline");
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
     ComputeShader* shgHashComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_hash.comp"));
     std::vector<SSBOBinding> hashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId), 
@@ -331,7 +268,7 @@ void SimulationManager::CreateSHGPipeline()
     UniformCallback cellSizeCallbackHash = [this](Shader* _shader){ BindCellSizeCallback(_shader); };
     UniformCallback ActiveCountCallbackHash = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsHash = {cellSizeCallbackHash, ActiveCountCallbackHash};
-    SimulationPass* hashPass = new SimulationPass(shgHashComputeShader, hashResources, DispatchCountCallbackHash, uniformsHash);
+    SimulationPass* hashPass = new SimulationPass(shgHashComputeShader, hashResources, DispatchCountCallbackHash, uniformsHash, passFlag);
     shgPipeline->AddPass(hashPass);
 
     CreateBitonicSortPass(shgPipeline, mHashBuffer);
@@ -345,7 +282,7 @@ void SimulationManager::CreateSHGPipeline()
                                                 SSBOBinding(mCellPrefixBuffer.mBindingLocation, mCellPrefixBuffer.mId)};
     DispatchCallback DispatchCountCallbackRangeStart = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,1,1); };
     std::vector<UniformCallback> uniformsRangeStart = {};
-    SimulationPass* rangeStartPass = new SimulationPass(shgRangeStartComputeShader, rangeStartResources, DispatchCountCallbackRangeStart, uniformsRangeStart);
+    SimulationPass* rangeStartPass = new SimulationPass(shgRangeStartComputeShader, rangeStartResources, DispatchCountCallbackRangeStart, uniformsRangeStart, passFlag);
     shgPipeline->AddPass(rangeStartPass);
 
     ComputeShader* shgRangeEndComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_range_end.comp"));
@@ -355,14 +292,14 @@ void SimulationManager::CreateSHGPipeline()
     DispatchCallback DispatchCountCallbackRangeEnd = [this](){ return glm::ivec3(mCellEndBuffer.mActiveCount,1,1); };
     UniformCallback ActiveCountCallbackRangeEnd = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
     std::vector<UniformCallback> uniformsRangeEnd = {ActiveCountCallbackRangeEnd};
-    SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd);
+    SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd, passFlag);
     shgPipeline->AddPass(rangeEndPass);
 
     ComputeShader* shgResetLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_reset_lookup_table.comp"));
     std::vector<SSBOBinding> ResetLookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
     DispatchCallback DispatchCountCallbackResetLookUp = [this](){ return glm::ivec3(mCellCountBuffer.ReadBack()[0],1,1); };
     std::vector<UniformCallback> uniformsResetLookUp = {};
-    SimulationPass* ResetLookUpPass = new SimulationPass(shgResetLookUpComputeShader, ResetLookUpResources, DispatchCountCallbackResetLookUp, uniformsResetLookUp);
+    SimulationPass* ResetLookUpPass = new SimulationPass(shgResetLookUpComputeShader, ResetLookUpResources, DispatchCountCallbackResetLookUp, uniformsResetLookUp, passFlag);
     shgPipeline->AddPass(ResetLookUpPass);
 
     ComputeShader* shgLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_build_lookup_table.comp"));
@@ -371,7 +308,7 @@ void SimulationManager::CreateSHGPipeline()
                                                 SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
     DispatchCallback DispatchCountCallbackLookUp = [this](){ return glm::ivec3(mCellCountBuffer.ReadBack()[0],1,1); };
     std::vector<UniformCallback> uniformsLookUp = {};
-    SimulationPass* LookUpPass = new SimulationPass(shgLookUpComputeShader, LookUpResources, DispatchCountCallbackLookUp, uniformsLookUp);
+    SimulationPass* LookUpPass = new SimulationPass(shgLookUpComputeShader, LookUpResources, DispatchCountCallbackLookUp, uniformsLookUp, passFlag);
     shgPipeline->AddPass(LookUpPass);
 
     mPipelines.push_back(shgPipeline);
@@ -380,6 +317,7 @@ void SimulationManager::CreateSHGPipeline()
 void SimulationManager::CreateSPHPipeline()
 {
     SimulationPipeline* sphPipeline = new SimulationPipeline("SPH Pipeline");
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
     ComputeShader* sphComputeShader = new ComputeShader(PathUtil::shader_dir("sph_particle.comp"));
     std::vector<SSBOBinding> sphResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
@@ -391,7 +329,7 @@ void SimulationManager::CreateSPHPipeline()
     UniformCallback sphCellSizeCallback = [this](Shader* _shader){ BindCellSizeCallback(_shader); };
     UniformCallback sphSmoothingRadiusCallback = [this](Shader* _shader){ BindSPHSmoothingRadius(_shader); };
     std::vector<UniformCallback> sphUniforms = {sphCellSizeCallback, sphSmoothingRadiusCallback};
-    SimulationPass* sphPass = new SimulationPass(sphComputeShader, sphResources, sphDispatchCountCallback, sphUniforms);
+    SimulationPass* sphPass = new SimulationPass(sphComputeShader, sphResources, sphDispatchCountCallback, sphUniforms, passFlag);
     sphPipeline->AddPass(sphPass);
     
     mPipelines.push_back(sphPipeline);
@@ -400,8 +338,17 @@ void SimulationManager::CreateSPHPipeline()
 void SimulationManager::CreateDGPipeline()
 {
     SimulationPipeline* dgPipeline = new SimulationPipeline("Dense Grid Pipeline");
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
-    ComputeShader* gridHashComputeShader = new ComputeShader(PathUtil::shader_dir("DenseGrid/dg_grid_hash.comp"));
+    ComputeShader* resetCellRangeComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_reset_range.comp"));
+    std::vector<SSBOBinding> resetCellRangeResources = {SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
+                                                SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId)};
+    DispatchCallback resetCellRangeDispatchCountCallback = [this](){ return glm::ivec3(mRenderCellStartBuffer.mActiveCount,1,1); };
+    std::vector<UniformCallback> resetCellRangeUniforms = {};
+    SimulationPass* resetCellRangePass = new SimulationPass(resetCellRangeComputeShader, resetCellRangeResources, resetCellRangeDispatchCountCallback, resetCellRangeUniforms, passFlag);
+    dgPipeline->AddPass(resetCellRangePass);
+
+    ComputeShader* gridHashComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_grid_hash.comp"));
     std::vector<SSBOBinding> gridHashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
                                                 SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId)};
     DispatchCallback gridHashDispatchCountCallback = [this](){ return glm::ivec3(mRenderGridBuffer.mActiveCount,1,1); };
@@ -409,22 +356,21 @@ void SimulationManager::CreateDGPipeline()
                                                     [this](Shader* _shader){ BindCallback(_shader, "gridMin", gGridBoundsMin); },
                                                     [this](Shader* _shader){ BindCallback(_shader, "gridSize", gGridSize); },
                                                     [this](Shader* _shader){ BindCallback(_shader, "activeCount", int(mRenderGridBuffer.mActiveCount)); }};
-    SimulationPass* gridHashPass = new SimulationPass(gridHashComputeShader, gridHashResources, gridHashDispatchCountCallback, gridHashUniforms);
+    SimulationPass* gridHashPass = new SimulationPass(gridHashComputeShader, gridHashResources, gridHashDispatchCountCallback, gridHashUniforms, passFlag);
     dgPipeline->AddPass(gridHashPass);
 
     CreateBitonicSortPass(dgPipeline, mRenderGridBuffer);
     CreateFlagPass(dgPipeline, mRenderGridBuffer, mRenderCellFlagBuffer, mRenderCellPrefixBuffer);
     CreateBlellochScanPass(dgPipeline, mRenderCellPrefixBuffer, mRenderCellCountBuffer);
 
-    ComputeShader* cellRangeComputeShader = new ComputeShader(PathUtil::shader_dir("DenseGrid/dg_range_start.comp"));
+    ComputeShader* cellRangeComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_range.comp"));
     std::vector<SSBOBinding> cellRangeResources = {SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId),
                                                 SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
                                                 SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId),
-                                                SSBOBinding(mRenderCellFlagBuffer.mBindingLocation, mRenderCellFlagBuffer.mId),
-                                                SSBOBinding(mRenderCellPrefixBuffer.mBindingLocation, mRenderCellPrefixBuffer.mId)};
+                                                SSBOBinding(mRenderCellFlagBuffer.mBindingLocation, mRenderCellFlagBuffer.mId)};
     DispatchCallback cellRangeDispatchCountCallback = [this](){ return glm::ivec3(mRenderCellStartBuffer.mActiveCount,1,1); };
     std::vector<UniformCallback> cellRangeUniforms = {[this](Shader* _shader){ BindCallback(_shader, "activeCount", int(mRenderGridBuffer.mActiveCount)); }};
-    SimulationPass* cellRangePass = new SimulationPass(cellRangeComputeShader, cellRangeResources, cellRangeDispatchCountCallback, cellRangeUniforms);
+    SimulationPass* cellRangePass = new SimulationPass(cellRangeComputeShader, cellRangeResources, cellRangeDispatchCountCallback, cellRangeUniforms, passFlag);
     dgPipeline->AddPass(cellRangePass);
 
     mPipelines.push_back(dgPipeline);
@@ -432,35 +378,38 @@ void SimulationManager::CreateDGPipeline()
 
 void SimulationManager::CreateBitonicSortPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer)
 {
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
     ComputeShader* sortComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_bitonic_sort.comp"));
     std::vector<SSBOBinding> sortResources = {SSBOBinding(_gridBuffer.mBindingLocation, _gridBuffer.mId)};
     DispatchCallback sortDispatchCountCallback = [this, &_gridBuffer](){ return glm::ivec3(_gridBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> sortUniforms = {};
     ExecuteCallback sortExecuteCallback = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BitonicSort(_pass,_count,_groups); };
-    SimulationPass* sortPass = new SimulationPass(sortComputeShader, sortResources, sortDispatchCountCallback, sortUniforms, sortExecuteCallback);
+    SimulationPass* sortPass = new SimulationPass(sortComputeShader, sortResources, sortDispatchCountCallback, sortUniforms, passFlag, sortExecuteCallback);
     _pipeline->AddPass(sortPass);
 }
 
 void SimulationManager::CreateFlagPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer, GPUBuffer<uint32_t>& _flagBuffer, GPUBuffer<uint32_t>& _prefixBuffer)
 {
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
     ComputeShader* computeShader = new ComputeShader(PathUtil::shader_dir("universal/u_hash_entry_flag.comp"));
     std::vector<SSBOBinding> resources = {SSBOBinding(_gridBuffer.mBindingLocation, _gridBuffer.mId),
                                             SSBOBinding(_flagBuffer.mBindingLocation, _flagBuffer.mId),
                                             SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback dispatchCountCallback = [this, &_flagBuffer](){ return glm::ivec3(int(_flagBuffer.mTotalCount), 1, 1); };
     std::vector<UniformCallback> uniforms = {[this, &_flagBuffer](Shader* _shader){ BindCallback(_shader, "activeCount", int(_flagBuffer.mActiveCount)); }};
-    SimulationPass* pass = new SimulationPass(computeShader, resources, dispatchCountCallback, uniforms);
+    SimulationPass* pass = new SimulationPass(computeShader, resources, dispatchCountCallback, uniforms, passFlag);
     _pipeline->AddPass(pass);
 }
 
 void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GPUBuffer<uint32_t>& _prefixBuffer, GPUBuffer<uint32_t>& _countBuffer)
 {
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
     ComputeShader* upScanComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_up_scan.comp"));
     std::vector<SSBOBinding> upScanResources = {SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback upScanDispatchCountCallback = [this, &_prefixBuffer](){ return glm::ivec3(_prefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> upScanUniforms = {};
     ExecuteCallback upScanExecuteCallback = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BlellochScan_Up(_pass,_count,_groups); };
-    SimulationPass* upScanPass = new SimulationPass(upScanComputeShader, upScanResources, upScanDispatchCountCallback, upScanUniforms, upScanExecuteCallback);
+    SimulationPass* upScanPass = new SimulationPass(upScanComputeShader, upScanResources, upScanDispatchCountCallback, upScanUniforms, passFlag, upScanExecuteCallback);
     _pipeline->AddPass(upScanPass);
 
     ComputeShader* resetComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_reset.comp"));
@@ -468,7 +417,7 @@ void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GP
                                                 SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback resetDispatchCountCallback = [this](){ return glm::ivec3(1,1,1); };
     std::vector<UniformCallback> resetUniforms = {};
-    SimulationPass* resetPass = new SimulationPass(resetComputeShader, resetResources, resetDispatchCountCallback, resetUniforms);
+    SimulationPass* resetPass = new SimulationPass(resetComputeShader, resetResources, resetDispatchCountCallback, resetUniforms, passFlag);
     _pipeline->AddPass(resetPass);
 
     ComputeShader* downScanComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_down_scan.comp"));
@@ -476,7 +425,7 @@ void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GP
     DispatchCallback downScanDispatchCountCallback = [this, &_prefixBuffer](){ return glm::ivec3(_prefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> downScanUniforms = {};
     ExecuteCallback downScanExecuteCallback = [this](SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups){ BindCustomExecuet_BlellochScan_Down(_pass,_count,_groups); };
-    SimulationPass* downScanPass = new SimulationPass(downScanComputeShader, downScanResources, downScanDispatchCountCallback, downScanUniforms, downScanExecuteCallback);
+    SimulationPass* downScanPass = new SimulationPass(downScanComputeShader, downScanResources, downScanDispatchCountCallback, downScanUniforms, passFlag, downScanExecuteCallback);
     _pipeline->AddPass(downScanPass);
 }
 
@@ -651,4 +600,376 @@ std::vector<std::pair<const char*, float>> SimulationManager::GetSimulationUIDat
     }
 
     return passTime;
+}
+
+void SimulationManager::ValidateRenderGrid()
+{
+    constexpr uint32_t INVALID = 0xFFFFFFFFu;
+
+    // ------------------------------------------------------------
+    // Read GPU buffers
+    // ------------------------------------------------------------
+
+    auto particles = ReadBuffer(mParticleBuffer);
+    auto entries   = ReadBuffer(mRenderGridBuffer);
+    auto flags     = ReadBuffer(mRenderCellFlagBuffer);
+    auto prefix    = ReadBuffer(mRenderCellPrefixBuffer);
+    auto counts    = ReadBuffer(mRenderCellCountBuffer);
+    auto starts    = ReadBuffer(mRenderCellStartBuffer);
+    auto ends      = ReadBuffer(mRenderCellEndBuffer);
+
+    const uint32_t particleCount = static_cast<uint32_t>(particles.size());
+    const uint32_t cellCount     = static_cast<uint32_t>(starts.size());
+
+    LOG_WARNING(
+        "Grid buffer sizes: starts={}, ends={}, counts={}, cellCount={}",
+        starts.size(),
+        ends.size(),
+        counts.size(),
+        cellCount
+    );
+
+    LOG_WARNING("========== RENDER GRID VALIDATION ==========");
+
+    LOG_WARNING(
+        "Particles: {}, Entries: {}, Cells: {}",
+        particleCount,
+        entries.size(),
+        cellCount
+    );
+
+    // ------------------------------------------------------------
+    // 1. Calculate the expected cell for every particle
+    // ------------------------------------------------------------
+
+    std::vector<uint32_t> expectedCell(particleCount, INVALID);
+
+    for (uint32_t i = 0; i < particleCount; ++i)
+    {
+        glm::ivec3 cell = glm::ivec3(glm::floor(
+            (particles[i].mPosition - gGridBoundsMin) / gCellSize
+        ));
+
+        if (cell.x < 0 ||
+            cell.y < 0 ||
+            cell.z < 0 ||
+            cell.x >= gGridSize.x ||
+            cell.y >= gGridSize.y ||
+            cell.z >= gGridSize.z)
+        {
+            expectedCell[i] = INVALID;
+            continue;
+        }
+
+        uint32_t gridIndex =
+            static_cast<uint32_t>(
+                cell.x +
+                cell.y * gGridSize.x +
+                cell.z * gGridSize.x * gGridSize.y
+            );
+
+        expectedCell[i] = gridIndex;
+    }
+
+    // ------------------------------------------------------------
+    // 2. Check sorted entries
+    // ------------------------------------------------------------
+
+    LOG_WARNING("--- Checking entries ---");
+
+    bool entriesValid = true;
+
+    for (uint32_t i = 0; i < entries.size(); ++i)
+    {
+        const HashEntry& entry = entries[i];
+
+        // Ignore unused entries
+        if (entry.mHash == INVALID ||
+            entry.mIndex == INVALID)
+        {
+            continue;
+        }
+
+        // Particle index must be valid
+        if (entry.mIndex >= particleCount)
+        {
+            LOG_ERROR(
+                "ENTRY {} INVALID PARTICLE INDEX: {}",
+                i,
+                entry.mIndex
+            );
+
+            entriesValid = false;
+            continue;
+        }
+
+        // Compare stored cell against particle's actual cell
+        uint32_t actualCell = expectedCell[entry.mIndex];
+
+        if (actualCell != entry.mHash)
+        {
+            LOG_ERROR(
+                "ENTRY {} WRONG CELL: stored cell={}, "
+                "particle={}, expected cell={}",
+                i,
+                entry.mHash,
+                entry.mIndex,
+                actualCell
+            );
+
+            entriesValid = false;
+        }
+
+        // Make sure sorting is actually sorted
+        if (i > 0)
+        {
+            const HashEntry& previous = entries[i - 1];
+
+            if (previous.mHash != INVALID &&
+                entry.mHash != INVALID &&
+                previous.mHash > entry.mHash)
+            {
+                LOG_ERROR(
+                    "SORT ERROR: entry {} hash={} comes after "
+                    "entry {} hash={}",
+                    i - 1,
+                    previous.mHash,
+                    i,
+                    entry.mHash
+                );
+
+                entriesValid = false;
+            }
+        }
+    }
+
+    LOG_WARNING(
+        "Entries: {}",
+        entriesValid ? "PASS" : "FAIL"
+    );
+
+    // ------------------------------------------------------------
+    // 3. Check flags
+    // ------------------------------------------------------------
+
+    LOG_WARNING("--- Checking flags ---");
+
+    bool flagsValid = true;
+
+    const uint32_t activeCount = particleCount;
+
+    for (uint32_t i = 0; i < activeCount; ++i)
+    {
+        uint32_t expectedFlag = 0;
+
+        if (i == 0)
+        {
+            expectedFlag = 1;
+        }
+        else
+        {
+            uint32_t currentHash  = entries[i].mHash;
+            uint32_t previousHash = entries[i - 1].mHash;
+
+            expectedFlag =
+                currentHash != previousHash ? 1 : 0;
+        }
+
+        if (flags[i] != expectedFlag)
+        {
+            LOG_ERROR(
+                "FLAG ERROR at {}: GPU={}, expected={}",
+                i,
+                flags[i],
+                expectedFlag
+            );
+
+            flagsValid = false;
+        }
+    }
+
+    LOG_WARNING(
+        "Flags: {}",
+        flagsValid ? "PASS" : "FAIL"
+    );
+
+    // ------------------------------------------------------------
+    // 4. Check prefix
+    // ------------------------------------------------------------
+
+    LOG_WARNING("--- Checking prefix ---");
+
+    bool prefixValid = true;
+
+    uint32_t running = 0;
+
+    for (uint32_t i = 0; i < activeCount; ++i)
+    {
+        uint32_t expected = running;
+
+        if (flags[i] == 1)
+            running++;
+
+        if (prefix[i] != expected)
+        {
+            LOG_ERROR(
+                "PREFIX ERROR at {}: GPU={}, expected={}",
+                i,
+                prefix[i],
+                expected
+            );
+
+            prefixValid = false;
+        }
+    }
+
+    LOG_WARNING(
+        "Prefix: {}",
+        prefixValid ? "PASS" : "FAIL"
+    );
+
+    // ------------------------------------------------------------
+    // 5. Build expected start/end ranges from sorted entries
+    // ------------------------------------------------------------
+
+    LOG_WARNING("--- Checking cell ranges ---");
+
+    std::vector<uint32_t> expectedStart(
+        cellCount,
+        INVALID
+    );
+
+    std::vector<uint32_t> expectedEnd(
+        cellCount,
+        INVALID
+    );
+
+    // Entries are sorted by cell.
+    // Find contiguous ranges of identical cell indices.
+
+    for (uint32_t i = 0; i < activeCount; ++i)
+    {
+        if (i >= entries.size())
+            break;
+
+        const HashEntry& entry = entries[i];
+
+        if (entry.mHash == INVALID)
+            continue;
+
+        uint32_t cell = entry.mHash;
+
+        if (cell >= cellCount)
+        {
+            LOG_ERROR(
+                "ENTRY {} HAS INVALID CELL {}",
+                i,
+                cell
+            );
+            continue;
+        }
+
+        // First entry belonging to this cell
+        if (expectedStart[cell] == INVALID)
+        {
+            expectedStart[cell] = i;
+        }
+
+        // End is one past the final entry.
+        expectedEnd[cell] = i + 1;
+    }
+
+
+    // Now compare GPU ranges against CPU ranges.
+
+    bool rangesValid = true;
+
+    for (uint32_t cell = 0; cell < cellCount; ++cell)
+    {
+        if (starts[cell] != expectedStart[cell])
+        {
+            LOG_ERROR(
+                "CELL START ERROR: cell={}, GPU={}, expected={}",
+                cell,
+                starts[cell],
+                expectedStart[cell]
+            );
+
+            rangesValid = false;
+        }
+
+        if (ends[cell] != expectedEnd[cell])
+        {
+            LOG_ERROR(
+                "CELL END ERROR: cell={}, GPU={}, expected={}",
+                cell,
+                ends[cell],
+                expectedEnd[cell]
+            );
+
+            rangesValid = false;
+        }
+    }
+
+    LOG_WARNING(
+        "Ranges: {}",
+        rangesValid ? "PASS" : "FAIL"
+    );
+
+    // ------------------------------------------------------------
+    // 6. Print compact table of populated cells
+    // ------------------------------------------------------------
+
+    LOG_WARNING("--- Populated cells ---");
+
+    for (uint32_t cell = 0; cell < cellCount; ++cell)
+    {
+        if (expectedStart[cell] == INVALID)
+            continue;
+
+        uint32_t count = ends[cell] - starts[cell];
+
+        LOG_DEBUG(
+            "Cell {}: start={}, end={}, count={}",
+            cell,
+            starts[cell],
+            ends[cell],
+            count
+        );
+
+        for (uint32_t i = starts[cell];
+             i < ends[cell];
+             ++i)
+        {
+            if (i >= entries.size())
+            {
+                LOG_ERROR(
+                    "    ENTRY {} OUT OF BOUNDS!",
+                    i
+                );
+                continue;
+            }
+
+            LOG_DEBUG(
+                "    entry {} -> particle {}",
+                i,
+                entries[i].mIndex
+            );
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Final result
+    // ------------------------------------------------------------
+
+    bool valid =
+        entriesValid &&
+        flagsValid &&
+        prefixValid &&
+        rangesValid;
+
+    LOG_WARNING(
+        "========== GRID VALIDATION: {} ==========",
+        valid ? "PASS" : "FAIL"
+    );
 }

@@ -1,0 +1,442 @@
+#version 450 core
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Structs
+struct Camera{
+    vec3 position;
+    vec3 up;
+    vec3 right;
+    vec3 front;
+    float fov;
+    float maxRayLength;
+};
+
+struct BlackHole{
+    vec3 position;
+    float radius;
+};
+
+struct DDARay{
+    ivec3 currentCell; // cell ray is in
+    ivec3 stepDirection; // direction of stepping (1 or -1) in each axis
+    vec3 tMax; // Distance to next boundry
+    vec3 tDelta; // Distance between current boundry and new boundry
+    float t; // Distance parameter | pos(t) = origin * direction * t
+};
+
+// Buffers
+struct Particle{
+    vec3 position;
+    float radius;
+    vec3 velocity;
+    float mass;
+    vec4 color;
+};
+layout(std430, binding = 0) readonly buffer particleBuffer {Particle particles[];};
+
+struct GridEntry{
+    uint cellIndex;
+    uint particleIndex;
+};
+layout(std430, binding = 1) readonly buffer entryBuffer {
+    GridEntry entries[];
+};
+
+layout(std430, binding = 2) readonly buffer CellStartBuffer
+{
+    uint cellStart[];
+};
+
+layout(std430, binding = 3) readonly buffer CellEndBuffer
+{
+    uint cellEnd[];
+};
+
+layout (rgba32f, binding = 0) uniform image2D imgOutput;
+layout(binding = 0) uniform samplerCube skybox;
+
+// Uniforms
+uniform float cellSize;
+uniform float particleRadius;
+uniform ivec3 gridSize;
+uniform vec3 gridMin;
+uniform vec3 gridMax;
+uniform Camera camera;
+uniform BlackHole bh;
+
+// Constants
+const uint INVALID = 0xffffffffu;
+const float INF = 1e30;
+const float EPSILON = 1e-5;
+const vec4 blackHoleColor = vec4(0.0, 0.0, 0.0, 1.0);
+const bool enableDebugColor = true; // if false it disables debug color, making debug areas show as skybox
+const vec4 invalidColor = vec4(0.3, 0.3, 0.3, 1.0);
+
+ivec2 GetTexelCoordinate()
+{
+    return ivec2(gl_GlobalInvocationID.xy);
+}
+
+bool IsOutsideWindow(vec2 _imageSize, ivec2 _texelCordId){
+    if (_texelCordId.x >= _imageSize.x ||
+        _texelCordId.y >= _imageSize.y)
+    {
+        return true;
+    }
+    return false;
+}
+
+// Returns true if ray hits sphere, false otherwise, updates hitT as well.
+bool RaySphereIntersection(vec3 _rayOrigin, vec3 _rayDirection, vec3 _spherePos, float _sphereRadius, float _tMin, float _tMax, out float _hitT)
+{
+    vec3 oc = _rayOrigin - _spherePos;
+
+    float b = dot(oc, _rayDirection);
+    float c = dot(oc, oc) - _sphereRadius * _sphereRadius;
+
+    float discriminant = b * b - c;
+
+    if(discriminant < 0.0)
+        return false;
+    
+    float sqrtD = sqrt(discriminant);
+
+    float t0 = -b - sqrtD;
+    float t1 = -b + sqrtD;
+
+    // find first intersection within cell segement
+    float t = t0;
+
+    if(t < _tMin)
+        t = t1;
+    
+    if(t < _tMin || t > _tMax)
+        return false;
+    
+    _hitT = t;
+    return true;
+}
+
+// Returns true if point within AABB (min/max cube)
+bool pointVsAABB(const vec3 _point, const vec3 _min, const vec3 _max) {
+    return (_point.x >= _min.x && _point.x <= _max.x) &&
+           (_point.y >= _min.y && _point.y <= _max.y) &&
+           (_point.z >= _min.z && _point.z <= _max.z);
+}
+
+// returns true if ray intersects AABB (min/max cube), false otherwise. Updates hit near and hit far.
+bool RayVsAABB(vec3 _rayOrigin, vec3 _rayDirection, vec3 _boxMin, vec3 _boxMax, float _tMin, float _tMax, out float _hitNear, out float _hitFar)
+{
+    vec3 invDir = 1.0 / _rayDirection;
+
+    vec3 t0 = (_boxMin - _rayOrigin) * invDir;
+    vec3 t1 = (_boxMax - _rayOrigin) * invDir;
+
+    vec3 tNear = min(t0, t1);
+    vec3 tFar  = max(t0, t1);
+
+    _hitNear = max(_tMin, max(tNear.x, max(tNear.y, tNear.z)));
+    _hitFar  = min(_tMax, min(tFar.x, min(tFar.y, tFar.z)));
+
+    return _hitNear <= _hitFar;
+}
+
+// returns false if camera inside render volume, true if it is outside
+bool IsCameraOutsideRenderVolume(ivec2 _texelCordId){
+
+    if(pointVsAABB(camera.position, gridMin, gridMax))
+        return false;
+    
+
+    imageStore(imgOutput, _texelCordId, invalidColor);
+    return true;
+}
+
+// Returns the inital ray position inside simulation grid if camera is outside simulation grid
+vec3 rayPositionInSimulationGrid(ivec2 _texelCordId, vec3 _rayDirection, float _rayEnd)
+{
+    // if camera already within simulaiton volume dont bother checking more
+    if(!IsCameraOutsideRenderVolume(_texelCordId)){
+        return camera.position;
+    }
+
+    // if camera is outside simulation volume se if a ray would hit it then start ray from there.
+    float gridEntryT = 0;
+    float gridExitT = 0;
+    if(RayVsAABB(camera.position, _rayDirection, gridMin, gridMax, 0.0, _rayEnd, gridEntryT, gridExitT)){
+        return camera.position + gridEntryT * _rayDirection;
+    }
+
+    // if ray misses simulation volume return invalid value. (invalid color for debug, can be just skybox color)
+    return vec3(INVALID);
+}
+
+// Returns false if any field in vector is invalid
+bool isVec3Valid(const vec3 _vec)
+{
+    if(_vec.x == INVALID && _vec.y == INVALID && _vec.z == INVALID)
+        return false;
+    return true;
+}
+
+DDARay InitDDA(vec3 _rayOrigin, vec3 _rayDirection)
+{
+    DDARay dda;
+
+    // finds the inital position -> cell of dda checking for landing on axis edge
+    vec3 pos = (_rayOrigin - gridMin) / cellSize;
+    dda.currentCell = ivec3(floor(pos));
+    if (_rayDirection.x < 0.0 && abs(fract(pos.x)) < EPSILON)
+        dda.currentCell.x--;
+    if (_rayDirection.y < 0.0 && abs(fract(pos.y)) < EPSILON)
+        dda.currentCell.y--;
+    if (_rayDirection.z < 0.0 && abs(fract(pos.z)) < EPSILON)
+        dda.currentCell.z--;
+
+    // Direction of grid traversal
+    dda.stepDirection = ivec3(
+        _rayDirection.x >= 0.0 ? 1 : -1,
+        _rayDirection.y >= 0.0 ? 1 : -1,
+        _rayDirection.z >= 0.0 ? 1 : -1
+    );
+
+    // Distance along ray between boundries
+    dda.tDelta = vec3(
+        _rayDirection.x != 0.0 ? abs(cellSize / _rayDirection.x) : 1.0 / INF,
+        _rayDirection.y != 0.0 ? abs(cellSize / _rayDirection.y) : 1.0 / INF,
+        _rayDirection.z != 0.0 ? abs(cellSize / _rayDirection.z) : 1.0 / INF
+    );
+
+    // Find next grid boundry on each axis
+    vec3 cellMin = gridMin + vec3(dda.currentCell) * cellSize;
+    vec3 cellMax = cellMin + vec3(cellSize);
+    vec3 nextBoundary = vec3(
+        dda.stepDirection.x > 0 ? cellMax.x : cellMin.x,
+        dda.stepDirection.y > 0 ? cellMax.y : cellMin.y,
+        dda.stepDirection.z > 0 ? cellMax.z : cellMin.z
+    );
+
+    // this is what usese the ray equation | P(t) = origin + direction * t | re arranged for t -> | t = (nextBoundary.x - origin.x) / direction.x |
+    // depending on what is least, that is the boundry hit
+    dda.tMax = vec3(
+        _rayDirection.x != 0.0 ? (nextBoundary.x - _rayOrigin.x) / _rayDirection.x : 1.0 / INF,
+        _rayDirection.y != 0.0 ? (nextBoundary.y - _rayOrigin.y) / _rayDirection.y : 1.0 / INF,
+        _rayDirection.z != 0.0 ? (nextBoundary.z - _rayOrigin.z) / _rayDirection.z : 1.0 / INF
+    );
+
+    dda.t = 0.0;
+
+    return dda;
+}
+
+void AdvanceDDA(inout DDARay _dda)
+{
+    // checks to find the closest boundry, whichever boundry has the closer axis wins.
+    if (_dda.tMax.x <= _dda.tMax.y &&
+        _dda.tMax.x <= _dda.tMax.z)
+    {
+        _dda.t = _dda.tMax.x; // record crossing position
+        _dda.tMax.x += _dda.tDelta.x; // update max boundry distance
+        _dda.currentCell.x += _dda.stepDirection.x; // update current cell
+    }
+    else if (_dda.tMax.y <= _dda.tMax.z)
+    {
+        _dda.t = _dda.tMax.y;
+        _dda.tMax.y += _dda.tDelta.y;
+        _dda.currentCell.y += _dda.stepDirection.y;
+    }
+    else
+    {
+        _dda.t = _dda.tMax.z;
+        _dda.tMax.z += _dda.tDelta.z;
+        _dda.currentCell.z += _dda.stepDirection.z;
+    }
+}
+
+uint GridIndex(ivec3 _c)
+{
+    return uint(
+        _c.x +
+        _c.y * gridSize.x +
+        _c.z * gridSize.x * gridSize.y
+    );
+}
+
+// Returns true if ray intersects an expanded cell
+bool RayIntersectsExpandedCell(vec3 _rayOrigin, vec3 _rayDirection, float _tMin, float _tMax, ivec3 _cell, float _radius)
+{
+    vec3 cellMin = gridMin + vec3(_cell) * cellSize;
+    vec3 cellMax = cellMin + vec3(cellSize);
+
+    // Expand cell by radius.
+    cellMin -= vec3(_radius);
+    cellMax += vec3(_radius);
+
+    float nearT;
+    float farT;
+
+    return RayVsAABB(_rayOrigin, _rayDirection, cellMin, cellMax, _tMin, _tMax, nearT, farT);
+}
+
+// Main raytrace function
+void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
+{
+    // Initialiation
+    // ------------------
+
+    // Ray ---
+    float rayEnd = camera.maxRayLength;
+
+    vec2 centredUV = (_uv * 2.0) - 1.0;
+    float fov = tan(radians(camera.fov) * 0.5);
+    centredUV *= fov;
+
+    float aspect = _imageSize.x / _imageSize.y;
+    centredUV.x *= aspect;
+
+    vec3 rayDirection = normalize(
+        camera.front +
+        centredUV.x * camera.right +
+        centredUV.y * camera.up
+    );
+
+    // World (need ray stuff and used in ray stuff){
+    vec4 skyBoxColour = vec4(texture(skybox, rayDirection).rgb, 1.0);
+    // }
+
+    vec3 rayOrigin = rayPositionInSimulationGrid(_texelCordId, rayDirection, rayEnd);
+    if(!isVec3Valid(rayOrigin)){
+        if(enableDebugColor)
+            imageStore(imgOutput, _texelCordId, invalidColor);
+        else
+            imageStore(imgOutput, _texelCordId, skyBoxColour);
+        return;
+    }
+
+    // Black hole ---
+    float blackHoleT = 0;
+    bool blackHoleHit = RaySphereIntersection(rayOrigin, rayDirection, bh.position, bh.radius, 0.0, rayEnd, blackHoleT);
+
+    // DDA ---
+    DDARay dda = InitDDA(rayOrigin, rayDirection);
+
+    // calulate new ray end based from simgrid start to simgrid end rather then camer to ray length.
+    float simGridExitT = 0;
+    float simGridEntryT = 0; // not used
+    bool gridHit = RayVsAABB(rayOrigin, rayDirection, gridMin, gridMax, dda.t, rayEnd, simGridEntryT, simGridExitT);
+    if(gridHit)
+        rayEnd = min(rayEnd, simGridExitT);
+    if (blackHoleHit) // dont search past black hole
+        rayEnd = min(rayEnd, blackHoleT);
+
+    // Processing (traversing grid)
+    // -------------------
+
+    // Init closest hit
+    float closestParticleT = rayEnd;
+    uint closestParticle = INVALID;
+    
+    // ray end is either end of grid or black hole T. So no grid check is nessesary
+    while(dda.t < rayEnd && dda.t < closestParticleT){
+        
+        // makes sure that current cell is valid for array
+        if (any(lessThan(dda.currentCell, ivec3(0))) ||
+            any(greaterThanEqual(dda.currentCell, gridSize)))
+        {
+            break;
+        }
+
+         // Calculate exit of CURRENT cell
+        float cellExitT = min(dda.tMax.x, min(dda.tMax.y, dda.tMax.z));
+        cellExitT = min(cellExitT, rayEnd);
+        float segmentEnd = min(cellExitT, closestParticleT);
+
+        // Check every neighbouring cell within radius range
+        int neighborRadius = int(ceil(particleRadius / cellSize));
+        for (int z = -neighborRadius; z <= neighborRadius; ++z)
+        {
+            for (int y = -neighborRadius; y <= neighborRadius; ++y)
+            {
+                for (int x = -neighborRadius; x <= neighborRadius; ++x)
+                {
+                    
+                    // Check to see if cell contains particles
+                    ivec3 neighborCell = dda.currentCell + ivec3(x, y, z);
+
+                    // make sure its within bounds
+                    if (any(lessThan(neighborCell, ivec3(0))) ||
+                        any(greaterThanEqual(neighborCell, gridSize)))
+                        continue;
+
+                    // Discard check if expanded cell does not intersect ray
+                    if (!RayIntersectsExpandedCell(rayOrigin, rayDirection, dda.t, segmentEnd, neighborCell, particleRadius))
+                        continue;
+                    
+                    
+                    uint gridIndex = GridIndex(neighborCell);
+                    uint start = cellStart[gridIndex];
+                    uint end   = cellEnd[gridIndex];
+
+                    if (start == INVALID || end == INVALID)
+                        continue;
+
+                    if (start >= entries.length())
+                        continue;
+
+                    end = min(end, uint(entries.length()));
+
+                    if (start >= end)
+                        continue;
+
+                    for (uint i = start; i < end; ++i)
+                    {
+                        // process particles
+                        uint particleIndex = entries[i].particleIndex;
+                        if (particleIndex == INVALID || particleIndex >= particles.length())
+                            continue;
+                        Particle particle = particles[particleIndex];
+
+                        float hitT;
+                        if (RaySphereIntersection(rayOrigin, rayDirection, particle.position, particle.radius, dda.t, segmentEnd, hitT))
+                        {
+                            if(hitT < closestParticleT){
+                                closestParticleT = hitT;
+                                closestParticle = particleIndex;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AdvanceDDA(dda);
+    }
+
+    // Output
+    // -------------------
+    if(blackHoleHit && blackHoleT <= closestParticleT){
+        imageStore(imgOutput, _texelCordId, blackHoleColor);
+    } else if(closestParticle != INVALID){
+        //vec4 color = particles[closestParticle].color;
+        vec4 color = vec4(1.0,0.0,0.0,1.0);
+        imageStore(imgOutput, _texelCordId, color);
+    } else {
+        imageStore(imgOutput, _texelCordId, skyBoxColour);
+    }
+
+    // FPS Notes
+    // 2000 -> 3000 fps without processing
+    // 1800 -> 2700 fps with only dda advance
+    // 300 -> 500 fps with dda + neighbour + particle
+}
+
+void main() {
+    
+    vec2 imgSize = imageSize(imgOutput);
+    ivec2 texelId = GetTexelCoordinate();
+    vec2 uv = (vec2(texelId) + 0.5) / imgSize;
+
+    if(IsOutsideWindow(imgSize, texelId)) return;
+
+    RaytracerMain(imgSize, texelId, uv);
+}

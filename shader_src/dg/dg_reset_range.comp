@@ -1,0 +1,37 @@
+#version 450 core
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 2) buffer CellStartBuffer
+{
+    uint cellStart[];
+};
+
+layout(std430, binding = 3) buffer CellEndBuffer
+{
+    uint cellEnd[];
+};
+
+const uint INVALID = 0xffffffffu;
+
+int GetIndex()
+{
+    return int(gl_GlobalInvocationID.x);
+}
+
+bool WithinBounds(int _id, int _count){
+    if(_id >= _count)
+        return false;
+    return true;
+}
+
+void main()
+{
+    int id = GetIndex();
+
+    if (!WithinBounds(id, cellStart.length()))
+        return;
+
+    cellStart[id] = INVALID;
+    cellEnd[id] = INVALID;
+}

@@ -29,9 +29,9 @@ private:
     GetPassTimeCallback mPassTimeCallback;
     const float mItemWidth = 60.f;
 
-    bool mEnableCameraWindow = false;
+    bool mEnableCameraWindow = true;
     bool mEnableWorldWindow = false;
-    bool mEnableSimulationWindow = true;
+    bool mEnableSimulationWindow = false;
     float mOriginalSimSpeed = 0.f;
     
     void InitImGui(struct GLFWwindow* _window);
