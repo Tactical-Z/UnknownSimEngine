@@ -45,13 +45,143 @@ void SimulationManager::Update(float _dt)
         pipline->ExecutePipeline();
     }
 
+    //ValidateHashGrid();
     //ValidateRenderGrid();
-    // LOG_WARNING("Particles: ");
+    //LOG_WARNING("Particles: ");
     // auto particles = ReadBuffer(mParticleBuffer);
     // for(uint32_t i = 0; i < particles.size(); i++)
     // {
     //     LOG_DEBUG("Index: {}, particle pos .x: {} .y:{} .z;{}", i, particles[i].mPosition.x, particles[i].mPosition.y, particles[i].mPosition.z);
     // }
+    // auto particles = ReadBuffer(mParticleBuffer);
+    // auto entries   = ReadBuffer(mRenderGridBuffer);
+    // auto starts    = ReadBuffer(mRenderCellStartBuffer);
+    // auto ends      = ReadBuffer(mRenderCellEndBuffer);
+
+    // auto flags = ReadBuffer(mRenderCellFlagBuffer);
+
+    // uint32_t validRanges = 0;
+    // uint32_t maxEnd = 0;
+
+    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
+    // {
+    //     if (starts[cell] == UINT_MAX && ends[cell] == UINT_MAX)
+    //         continue;
+
+    //     LOG_DEBUG(
+    //         "RANGE cell={} start={} end={}",
+    //         cell,
+    //         starts[cell],
+    //         ends[cell]
+    //     );
+
+    //     validRanges++;
+    //     maxEnd = std::max(maxEnd, ends[cell]);
+    // }
+
+    // LOG_DEBUG("Valid ranges = {}, maxEnd = {}", validRanges, maxEnd);
+
+    // uint32_t flagCount = 0;
+
+    // for (uint32_t i = 0; i < 3000; ++i)
+    //     flagCount += flags[i];
+
+    // LOG_DEBUG("FLAG COUNT = {}", flagCount);
+
+    // LOG_DEBUG("End1");
+
+    // for (uint32_t i = 0; i < 30; ++i)
+    // {
+    //     LOG_DEBUG(
+    //         "FLAG[{}] hash={} flag={}",
+    //         i,
+    //         entries[i].mHash,
+    //         flags[i]
+    //     );
+    // }
+    // LOG_DEBUG("End2");
+
+    // uint32_t zCount[10] = {};
+
+    // for (uint32_t i = 0; i < particles.size(); ++i)
+    // {
+    //     glm::ivec3 cell = glm::ivec3(
+    //         glm::floor(
+    //             (particles[i].mPosition - gGridBoundsMin) / gCellSize
+    //         )
+    //     );
+
+    //     if (cell.x < 0 || cell.x >= 10 ||
+    //         cell.y < 0 || cell.y >= 10 ||
+    //         cell.z < 0 || cell.z >= 10)
+    //         continue;
+
+    //     zCount[cell.z]++;
+    // }
+    
+    // for (int z = 0; z < 10; ++z)
+    //     LOG_DEBUG("Z layer {}: {} particles", z, zCount[z]);
+
+    // LOG_DEBUG("End3");
+    // uint32_t total = 0;
+    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
+    // {
+    //     if (starts[cell] == UINT_MAX ||
+    //         ends[cell] == UINT_MAX)
+    //         continue;
+
+    //     total += ends[cell] - starts[cell];
+    // }
+
+    // LOG_DEBUG("Particles represented by ranges: {}", total);
+    // LOG_DEBUG("End4");
+
+    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
+    // {
+    //     uint32_t start = starts[cell];
+    //     uint32_t end = ends[cell];
+
+    //     if (start == UINT_MAX)
+    //         continue;
+
+    //     for (uint32_t i = start; i < end; ++i)
+    //     {
+    //         uint32_t particle = entries[i].mIndex;
+            
+    //         if (particle == UINT_MAX || particle >= particles.size())
+    //         {
+    //             LOG_DEBUG(
+    //                 "BAD PARTICLE INDEX: cell={} i={} particle={}",
+    //                 cell, i, particle
+    //             );
+    //             continue;
+    //         }
+
+    //         // Calculate expected cell on CPU
+    //         glm::ivec3 expectedCell = glm::ivec3(
+    //             glm::floor(
+    //                 (particles[particle].mPosition - gGridBoundsMin)
+    //                 / gCellSize
+    //             )
+    //         );
+
+    //         uint32_t expectedIndex =
+    //             expectedCell.x +
+    //             expectedCell.y * gGridSize.x +
+    //             expectedCell.z * gGridSize.x * gGridSize.y;
+
+    //         if (expectedIndex != cell)
+    //         {
+    //             LOG_DEBUG(
+    //                 "BAD RANGE: cell={} particle={} expectedCell={}",
+    //                 cell,
+    //                 particle,
+    //                 expectedIndex
+    //             );
+    //         }
+    //     }
+    // }
+    // LOG_DEBUG("End5");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
@@ -267,7 +397,8 @@ void SimulationManager::CreateSHGPipeline()
     DispatchCallback DispatchCountCallbackHash = [this](){ return glm::ivec3(mHashBuffer.mTotalCount,1,1); };
     UniformCallback cellSizeCallbackHash = [this](Shader* _shader){ BindCellSizeCallback(_shader); };
     UniformCallback ActiveCountCallbackHash = [this](Shader* _shader){ BindActiveCountCallback(_shader); };
-    std::vector<UniformCallback> uniformsHash = {cellSizeCallbackHash, ActiveCountCallbackHash};
+    UniformCallback GridMinCallback = [this](Shader* _shader){ BindCallback(_shader, "gridMin", gGridBoundsMin); };
+    std::vector<UniformCallback> uniformsHash = {cellSizeCallbackHash, ActiveCountCallbackHash, GridMinCallback};
     SimulationPass* hashPass = new SimulationPass(shgHashComputeShader, hashResources, DispatchCountCallbackHash, uniformsHash, passFlag);
     shgPipeline->AddPass(hashPass);
 
@@ -297,7 +428,7 @@ void SimulationManager::CreateSHGPipeline()
 
     ComputeShader* shgResetLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_reset_lookup_table.comp"));
     std::vector<SSBOBinding> ResetLookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
-    DispatchCallback DispatchCountCallbackResetLookUp = [this](){ return glm::ivec3(mCellCountBuffer.ReadBack()[0],1,1); };
+    DispatchCallback DispatchCountCallbackResetLookUp = [this](){ return glm::ivec3(mHashLookupBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> uniformsResetLookUp = {};
     SimulationPass* ResetLookUpPass = new SimulationPass(shgResetLookUpComputeShader, ResetLookUpResources, DispatchCountCallbackResetLookUp, uniformsResetLookUp, passFlag);
     shgPipeline->AddPass(ResetLookUpPass);
@@ -328,7 +459,9 @@ void SimulationManager::CreateSPHPipeline()
     DispatchCallback sphDispatchCountCallback = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,1,1); };
     UniformCallback sphCellSizeCallback = [this](Shader* _shader){ BindCellSizeCallback(_shader); };
     UniformCallback sphSmoothingRadiusCallback = [this](Shader* _shader){ BindSPHSmoothingRadius(_shader); };
-    std::vector<UniformCallback> sphUniforms = {sphCellSizeCallback, sphSmoothingRadiusCallback};
+    UniformCallback sphNeighborRangeCallback = [this](Shader* _shader){ BindCallback(_shader, "neighborRadius", gNeighborRadius); };
+    UniformCallback sphGridMinCallback = [this](Shader* _shader){ BindCallback(_shader, "gridMin", gGridBoundsMin); };
+    std::vector<UniformCallback> sphUniforms = {sphCellSizeCallback, sphSmoothingRadiusCallback, sphNeighborRangeCallback, sphGridMinCallback};
     SimulationPass* sphPass = new SimulationPass(sphComputeShader, sphResources, sphDispatchCountCallback, sphUniforms, passFlag);
     sphPipeline->AddPass(sphPass);
     
@@ -368,7 +501,7 @@ void SimulationManager::CreateDGPipeline()
                                                 SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
                                                 SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId),
                                                 SSBOBinding(mRenderCellFlagBuffer.mBindingLocation, mRenderCellFlagBuffer.mId)};
-    DispatchCallback cellRangeDispatchCountCallback = [this](){ return glm::ivec3(mRenderCellStartBuffer.mActiveCount,1,1); };
+    DispatchCallback cellRangeDispatchCountCallback = [this](){ return glm::ivec3(mRenderGridBuffer.mActiveCount,1,1); };
     std::vector<UniformCallback> cellRangeUniforms = {[this](Shader* _shader){ BindCallback(_shader, "activeCount", int(mRenderGridBuffer.mActiveCount)); }};
     SimulationPass* cellRangePass = new SimulationPass(cellRangeComputeShader, cellRangeResources, cellRangeDispatchCountCallback, cellRangeUniforms, passFlag);
     dgPipeline->AddPass(cellRangePass);
@@ -972,4 +1105,822 @@ void SimulationManager::ValidateRenderGrid()
         "========== GRID VALIDATION: {} ==========",
         valid ? "PASS" : "FAIL"
     );
+}
+
+bool SimulationManager::ValidateHashGrid()
+{
+    LOG_WARNING("========== SPATIAL HASH VALIDATION ==========");
+
+    // -------------------------------------------------------------------------
+    // Read GPU buffers
+    // -------------------------------------------------------------------------
+
+    auto particles = ReadBuffer(mParticleBuffer);
+    auto hashes    = ReadBuffer(mHashBuffer);
+    auto flags     = ReadBuffer(mCellFlagBuffer);
+    auto prefix    = ReadBuffer(mCellPrefixBuffer);
+    auto counts    = ReadBuffer(mCellCountBuffer);
+    auto starts    = ReadBuffer(mCellStartBuffer);
+    auto ends      = ReadBuffer(mCellEndBuffer);
+    auto unique    = ReadBuffer(mUniqueHashBuffer);
+    auto lookup    = ReadBuffer(mHashLookupBuffer);
+
+    const uint32_t particleCount =
+        static_cast<uint32_t>(particles.size());
+
+    const uint32_t hashCount =
+        static_cast<uint32_t>(hashes.size());
+
+    const uint32_t flagCount =
+        static_cast<uint32_t>(flags.size());
+
+    const uint32_t prefixCount =
+        static_cast<uint32_t>(prefix.size());
+
+    const uint32_t uniqueCount =
+        static_cast<uint32_t>(unique.size());
+
+    const uint32_t lookupCount =
+        static_cast<uint32_t>(lookup.size());
+
+    // This is the number of particles actually processed by your hash shader.
+    //
+    // Replace this with however you obtain the CPU value if activeCount is
+    // different from particleCount.
+    const uint32_t activeCount = particleCount;
+
+    LOG_WARNING(
+        "Particles={}, HashEntries={}, Flags={}, Prefix={}, "
+        "CountBuffer={}, UniqueHashes={}, Lookup={}",
+        particleCount,
+        hashCount,
+        flagCount,
+        prefixCount,
+        counts.size(),
+        uniqueCount,
+        lookupCount
+    );
+
+    bool valid = true;
+
+    // -------------------------------------------------------------------------
+    // GPU hash function -- MUST MATCH THE COMPUTE SHADER
+    // -------------------------------------------------------------------------
+
+    auto Hash = [](glm::ivec3 c) -> uint32_t
+    {
+        constexpr uint32_t h1 = 79801u;
+        constexpr uint32_t h2 = 62548u;
+        constexpr uint32_t h3 = 32193u;
+
+        return static_cast<uint32_t>(c.x) * h1 ^
+               static_cast<uint32_t>(c.y) * h2 ^
+               static_cast<uint32_t>(c.z) * h3;
+    };
+
+    // -------------------------------------------------------------------------
+    // 1. Check particle hashes
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking particle hashes ---");
+
+    std::vector<uint32_t> expectedParticleHashes(particleCount);
+
+    for (uint32_t i = 0; i < particleCount; ++i)
+    {
+        glm::ivec3 cell =
+            glm::ivec3(glm::floor(
+                particles[i].mPosition / gCellSize
+            ));
+
+        expectedParticleHashes[i] = Hash(cell);
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Check hash entries
+    //
+    // The hash buffer was sorted by hash, so the sorted entries should contain
+    // exactly the expected particle/hash pairs, just in sorted order.
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking hash entries ---");
+
+    bool hashesValid = true;
+
+    if (activeCount > hashCount)
+    {
+        LOG_ERROR(
+            "activeCount={} is greater than hash buffer size={}",
+            activeCount,
+            hashCount
+        );
+
+        hashesValid = false;
+    }
+
+    // Check every active sorted entry.
+    for (uint32_t i = 0; i < activeCount && i < hashCount; ++i)
+    {
+        const HashEntry& entry = hashes[i];
+
+        if (entry.mIndex >= particleCount)
+        {
+            LOG_ERROR(
+                "HASH ENTRY {} INVALID PARTICLE INDEX: {}",
+                i,
+                entry.mIndex
+            );
+
+            hashesValid = false;
+            continue;
+        }
+
+        const uint32_t expectedHash =
+            expectedParticleHashes[entry.mIndex];
+
+        if (entry.mHash != expectedHash)
+        {
+            LOG_ERROR(
+                "HASH ENTRY {} WRONG HASH: GPU={}, particle={}, expected={}",
+                i,
+                entry.mHash,
+                entry.mIndex,
+                expectedHash
+            );
+
+            hashesValid = false;
+        }
+
+        // Sorted order check.
+        if (i > 0 && hashes[i - 1].mHash > entry.mHash)
+        {
+            LOG_ERROR(
+                "HASH SORT ERROR at {}: previous={}, current={}",
+                i,
+                hashes[i - 1].mHash,
+                entry.mHash
+            );
+
+            hashesValid = false;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Check inactive entries.
+    //
+    // Your hash shader explicitly writes:
+    //
+    // hashes[id].hash          = 0xffffffff;
+    // hashes[id].particleIndex = 0xffffffff;
+    //
+    // for id >= activeCount.
+    // -------------------------------------------------------------------------
+
+    for (uint32_t i = activeCount; i < hashCount; ++i)
+    {
+        if (hashes[i].mHash != 0xffffffffu ||
+            hashes[i].mIndex != 0xffffffffu)
+        {
+            LOG_ERROR(
+                "INACTIVE HASH ENTRY {} NOT SENTINEL: "
+                "GPU={{hash={}, particle={}}}",
+                i,
+                hashes[i].mHash,
+                hashes[i].mIndex
+            );
+
+            hashesValid = false;
+        }
+    }
+
+    LOG_WARNING(
+        "Hash entries: {}",
+        hashesValid ? "PASS" : "FAIL"
+    );
+
+    valid &= hashesValid;
+
+    // -------------------------------------------------------------------------
+    // 3. Check flags
+    //
+    // A flag is 1 when this entry starts a new hash.
+    //
+    // flag[0] = 1
+    //
+    // flag[i] = 1 when:
+    //     hashes[i].mHash != hashes[i-1].mHash
+    //
+    // Otherwise flag = 0.
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking flags ---");
+
+    bool flagsValid = true;
+
+    if (flagCount < activeCount)
+    {
+        LOG_ERROR(
+            "Flag buffer too small: {} < activeCount {}",
+            flagCount,
+            activeCount
+        );
+
+        flagsValid = false;
+    }
+    else
+    {
+        for (uint32_t i = 0; i < activeCount; ++i)
+        {
+            uint32_t expectedFlag = 0;
+
+            if (i == 0)
+            {
+                expectedFlag = 1;
+            }
+            else
+            {
+                expectedFlag =
+                    hashes[i].mHash != hashes[i - 1].mHash
+                    ? 1
+                    : 0;
+            }
+
+            if (flags[i] != expectedFlag)
+            {
+                LOG_ERROR(
+                    "FLAG ERROR at {}: GPU={}, expected={}",
+                    i,
+                    flags[i],
+                    expectedFlag
+                );
+
+                flagsValid = false;
+            }
+        }
+    }
+
+    LOG_WARNING(
+        "Flags: {}",
+        flagsValid ? "PASS" : "FAIL"
+    );
+
+    valid &= flagsValid;
+
+    // -------------------------------------------------------------------------
+    // 4. Check exclusive prefix scan
+    //
+    // Example:
+    //
+    // flags:  1 0 1 0 0 1
+    // prefix: 0 1 1 2 2 2
+    //
+    // prefix[i] = number of flags before i.
+    //
+    // The final number of unique hashes is:
+    //
+    // prefix[last] + flags[last]
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking prefix ---");
+
+    bool prefixValid = true;
+
+    uint32_t expectedUniqueCount = 0;
+
+    if (activeCount > 0)
+    {
+        uint32_t running = 0;
+
+        for (uint32_t i = 0; i < activeCount; ++i)
+        {
+            if (prefix[i] != running)
+            {
+                LOG_ERROR(
+                    "PREFIX ERROR at {}: GPU={}, expected={}",
+                    i,
+                    prefix[i],
+                    running
+                );
+
+                prefixValid = false;
+            }
+
+            running += flags[i];
+        }
+
+        expectedUniqueCount = running;
+    }
+
+    LOG_WARNING(
+        "Prefix: {} (expected unique hashes={})",
+        prefixValid ? "PASS" : "FAIL",
+        expectedUniqueCount
+    );
+
+    valid &= prefixValid;
+
+    // -------------------------------------------------------------------------
+    // 5. Check unique hash buffer
+    //
+    // Range-start shader does:
+    //
+    // uint cellIndex = cellScan[id];
+    // uniqueHashes[cellIndex] = hashes[id].hash;
+    //
+    // Therefore each flag==1 entry should populate:
+    //
+    // uniqueHashes[prefix[i]] = hashes[i].mHash
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking unique hashes ---");
+
+    bool uniqueValid = true;
+
+    if (uniqueCount < expectedUniqueCount)
+    {
+        LOG_ERROR(
+            "Unique hash buffer too small: {} < expected {}",
+            uniqueCount,
+            expectedUniqueCount
+        );
+
+        uniqueValid = false;
+    }
+    else
+    {
+        for (uint32_t i = 0; i < activeCount; ++i)
+        {
+            if (flags[i] != 1)
+                continue;
+
+            uint32_t cellIndex = prefix[i];
+
+            if (cellIndex >= uniqueCount)
+            {
+                LOG_ERROR(
+                    "UNIQUE HASH ERROR at entry {}: "
+                    "cellIndex={} out of range {}",
+                    i,
+                    cellIndex,
+                    uniqueCount
+                );
+
+                uniqueValid = false;
+                continue;
+            }
+
+            if (unique[cellIndex] != hashes[i].mHash)
+            {
+                LOG_ERROR(
+                    "UNIQUE HASH ERROR at cell {}: GPU={}, expected={}",
+                    cellIndex,
+                    unique[cellIndex],
+                    hashes[i].mHash
+                );
+
+                uniqueValid = false;
+            }
+        }
+    }
+
+    LOG_WARNING(
+        "Unique hashes: {}",
+        uniqueValid ? "PASS" : "FAIL"
+    );
+
+    valid &= uniqueValid;
+
+    // -------------------------------------------------------------------------
+    // 6. Check cell count
+    //
+    // Your counter buffer contains ONE uint.
+    //
+    // The range-end shader uses:
+    //
+    // layout(std430, binding = 4)
+    // buffer CounterBuffer {
+    //     uint cellCount;
+    // };
+    //
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking count buffer ---");
+
+    bool countValid = true;
+
+    if (counts.empty())
+    {
+        LOG_ERROR("Count buffer is empty");
+        countValid = false;
+    }
+    else
+    {
+        const uint32_t gpuCellCount = counts[0];
+
+        LOG_WARNING(
+            "Unique cell count: GPU={}, expected={}",
+            gpuCellCount,
+            expectedUniqueCount
+        );
+
+        if (gpuCellCount != expectedUniqueCount)
+        {
+            LOG_ERROR(
+                "CELL COUNT ERROR: GPU={}, expected={}",
+                gpuCellCount,
+                expectedUniqueCount
+            );
+
+            countValid = false;
+        }
+    }
+
+    LOG_WARNING(
+        "Count: {}",
+        countValid ? "PASS" : "FAIL"
+    );
+
+    valid &= countValid;
+
+    // -------------------------------------------------------------------------
+    // 7. Check cellStart / cellEnd
+    //
+    // IMPORTANT:
+    //
+    // Your range-start shader writes:
+    //
+    // cellStart[cellIndex] = id;
+    //
+    // where id is the SORTED HASH ENTRY INDEX.
+    //
+    // So:
+    //
+    // cellStart[cell] = first sorted entry
+    // cellEnd[cell]   = one-past-last sorted entry
+    //
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking cell ranges ---");
+
+    bool rangesValid = true;
+
+    if (starts.size() < expectedUniqueCount)
+    {
+        LOG_ERROR(
+            "Cell start buffer too small: {} < {}",
+            starts.size(),
+            expectedUniqueCount
+        );
+
+        rangesValid = false;
+    }
+
+    if (ends.size() < expectedUniqueCount)
+    {
+        LOG_ERROR(
+            "Cell end buffer too small: {} < {}",
+            ends.size(),
+            expectedUniqueCount
+        );
+
+        rangesValid = false;
+    }
+
+    if (rangesValid)
+    {
+        for (uint32_t cell = 0;
+             cell < expectedUniqueCount;
+             ++cell)
+        {
+            // Find first sorted entry for this unique hash.
+            uint32_t expectedStart = 0;
+            uint32_t expectedEnd   = 0;
+
+            bool found = false;
+
+            for (uint32_t i = 0; i < activeCount; ++i)
+            {
+                if (hashes[i].mHash == unique[cell])
+                {
+                    if (!found)
+                    {
+                        expectedStart = i;
+                        found = true;
+                    }
+
+                    expectedEnd = i + 1;
+                }
+            }
+
+            if (!found)
+            {
+                LOG_ERROR(
+                    "RANGE ERROR for cell {} / hash {}: "
+                    "hash not found in sorted entries",
+                    cell,
+                    unique[cell]
+                );
+
+                rangesValid = false;
+                continue;
+            }
+
+            if (starts[cell] != expectedStart)
+            {
+                LOG_ERROR(
+                    "CELL START ERROR at cell {}: "
+                    "GPU={}, expected={}",
+                    cell,
+                    starts[cell],
+                    expectedStart
+                );
+
+                rangesValid = false;
+            }
+
+            if (ends[cell] != expectedEnd)
+            {
+                LOG_ERROR(
+                    "CELL END ERROR at cell {}: "
+                    "GPU={}, expected={}",
+                    cell,
+                    ends[cell],
+                    expectedEnd
+                );
+
+                rangesValid = false;
+            }
+
+            if (starts[cell] >= ends[cell])
+            {
+                LOG_ERROR(
+                    "INVALID RANGE at cell {}: start={}, end={}",
+                    cell,
+                    starts[cell],
+                    ends[cell]
+                );
+
+                rangesValid = false;
+            }
+
+            // Check that every entry in the range has the expected hash.
+            for (uint32_t i = starts[cell];
+                 i < ends[cell];
+                 ++i)
+            {
+                if (i >= activeCount)
+                {
+                    LOG_ERROR(
+                        "RANGE OUT OF BOUNDS: cell={}, entry={}",
+                        cell,
+                        i
+                    );
+
+                    rangesValid = false;
+                    break;
+                }
+
+                if (hashes[i].mHash != unique[cell])
+                {
+                    LOG_ERROR(
+                        "RANGE CONTENT ERROR: cell={}, entry={}, "
+                        "GPU hash={}, expected={}",
+                        cell,
+                        i,
+                        hashes[i].mHash,
+                        unique[cell]
+                    );
+
+                    rangesValid = false;
+                }
+            }
+        }
+    }
+
+    LOG_WARNING(
+        "Cell ranges: {}",
+        rangesValid ? "PASS" : "FAIL"
+    );
+
+    valid &= rangesValid;
+
+    // -------------------------------------------------------------------------
+    // 8. Check hash lookup table
+    //
+    // This is NOT indexed by cell.
+    //
+    // The GPU does:
+    //
+    // uint slot = hash & (lookupSize - 1);
+    //
+    // and then linear probes.
+    //
+    // Therefore lookup[cell] is WRONG.
+    //
+    // We must reproduce the exact lookup algorithm here.
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Checking hash lookup ---");
+
+    bool lookupValid = true;
+
+    if (lookupCount == 0)
+    {
+        LOG_ERROR("Lookup buffer is empty");
+        lookupValid = false;
+    }
+    else
+    {
+        // Your shader relies on:
+        //
+        // slot = hash & (lookupSize - 1)
+        //
+        // This only works as modulo for a power-of-two table.
+        const uint32_t mask = lookupCount - 1;
+
+        if ((lookupCount & mask) != 0)
+        {
+            LOG_ERROR(
+                "LOOKUP ERROR: lookup size {} is not a power of two",
+                lookupCount
+            );
+
+            lookupValid = false;
+        }
+
+        const uint32_t EMPTY_HASH = 0xffffffffu;
+
+        // -------------------------------------------------------------
+        // Check every unique hash can be found exactly as the GPU finds it.
+        // -------------------------------------------------------------
+
+        for (uint32_t cell = 0;
+             cell < expectedUniqueCount;
+             ++cell)
+        {
+            const uint32_t expectedHash = unique[cell];
+
+            uint32_t slot = expectedHash & mask;
+
+            bool found = false;
+
+            for (uint32_t probe = 0;
+                 probe < lookupCount;
+                 ++probe)
+            {
+                HashEntry& entry = lookup[slot];
+
+                // Same termination condition as FindCell().
+                if (entry.mHash == EMPTY_HASH)
+                {
+                    LOG_ERROR(
+                        "LOOKUP ERROR: hash {} / cell {} "
+                        "hit empty slot {} after {} probes",
+                        expectedHash,
+                        cell,
+                        slot,
+                        probe
+                    );
+
+                    lookupValid = false;
+                    break;
+                }
+
+                if (entry.mHash == expectedHash)
+                {
+                    found = true;
+
+                    if (entry.mIndex != cell)
+                    {
+                        LOG_ERROR(
+                            "LOOKUP ERROR at slot {}: "
+                            "GPU={{hash={}, cellIndex={}}}, "
+                            "expected={{hash={}, cellIndex={}}}",
+                            slot,
+                            entry.mHash,
+                            entry.mIndex,
+                            expectedHash,
+                            cell
+                        );
+
+                        lookupValid = false;
+                    }
+
+                    break;
+                }
+
+                // Same linear probing as GPU.
+                slot = (slot + 1) & mask;
+            }
+
+            if (!found)
+            {
+                LOG_ERROR(
+                    "LOOKUP ERROR: hash {} / cell {} "
+                    "was not found in lookup table",
+                    expectedHash,
+                    cell
+                );
+
+                lookupValid = false;
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Check every occupied lookup entry.
+        //
+        // Every occupied entry must point to a valid unique hash.
+        // -------------------------------------------------------------
+
+        for (uint32_t slot = 0;
+             slot < lookupCount;
+             ++slot)
+        {
+            const HashEntry& entry = lookup[slot];
+
+            if (entry.mHash == EMPTY_HASH)
+                continue;
+
+            if (entry.mIndex >= expectedUniqueCount)
+            {
+                LOG_ERROR(
+                    "LOOKUP ERROR at slot {}: "
+                    "hash={}, invalid cellIndex={}",
+                    slot,
+                    entry.mHash,
+                    entry.mIndex
+                );
+
+                lookupValid = false;
+                continue;
+            }
+
+            if (unique[entry.mIndex] != entry.mHash)
+            {
+                LOG_ERROR(
+                    "LOOKUP ERROR at slot {}: "
+                    "hash={}, cellIndex={}, uniqueHash={}",
+                    slot,
+                    entry.mHash,
+                    entry.mIndex,
+                    unique[entry.mIndex]
+                );
+
+                lookupValid = false;
+            }
+        }
+    }
+
+    LOG_WARNING(
+        "Hash lookup: {}",
+        lookupValid ? "PASS" : "FAIL"
+    );
+
+    valid &= lookupValid;
+
+    // -------------------------------------------------------------------------
+    // 9. Print the resulting spatial hash table
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING("--- Spatial hash table ---");
+
+    for (uint32_t cell = 0;
+         cell < expectedUniqueCount;
+         ++cell)
+    {
+        const uint32_t hash  = unique[cell];
+        const uint32_t start = starts[cell];
+        const uint32_t end   = ends[cell];
+
+        LOG_DEBUG(
+            "Hash {}: start={}, end={}, count={}",
+            hash,
+            start,
+            end,
+            end - start
+        );
+
+        for (uint32_t i = start; i < end; ++i)
+        {
+            if (i >= activeCount)
+                break;
+
+            LOG_DEBUG(
+                "    entry {} -> particle {}",
+                i,
+                hashes[i].mIndex
+            );
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Final result
+    // -------------------------------------------------------------------------
+
+    LOG_WARNING(
+        "========== SPATIAL HASH VALIDATION: {} ==========",
+        valid ? "PASS" : "FAIL"
+    );
+
+    return valid;
 }

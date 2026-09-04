@@ -1,8 +1,6 @@
 #include "Engine/Rendering/Renderer.h"
 #include "Engine/Camera.h"
 #include "Engine/Simulation/SimData.h"
-#include "Engine/Simulation/ParticleData.h"
-#include "Engine/Simulation/HashGridData.h"
 #include "Engine/Simulation/SimulationPass.h"
 #include "Shaders/ComputeShader.h"
 #include "Shaders/VisShader.h"
@@ -131,6 +129,7 @@ void Renderer::BindUniforms(const class Shader* _shader)
     _shader->setIVec3("gridSize", gGridSize);
     _shader->setVec3("gridMin", gGridBoundsMin);
     _shader->setVec3("gridMax", gGridBoundsMax);
+    _shader->setInt("neighborRadius", gNeighborRadius);
 }
 
 void Renderer::SetWindowSize(glm::ivec2 _newWindowSize){

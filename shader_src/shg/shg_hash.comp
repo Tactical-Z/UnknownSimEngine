@@ -25,6 +25,7 @@ buffer hashBuffer {
 
 uniform int activeCount;
 uniform float cellSize;
+uniform vec3 gridMin;
 
 int GetParticleIndex()
 {
@@ -58,7 +59,7 @@ void main() {
         return;
     }
 
-    ivec3 cellCoordinates = ivec3(floor(particles[id].position / cellSize));
+    ivec3 cellCoordinates = ivec3(floor((particles[id].position - gridMin) / cellSize));
     hashes[id].hash = Hash(cellCoordinates);
     hashes[id].particleIndex = id;
 }

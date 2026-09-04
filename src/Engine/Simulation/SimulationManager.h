@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Engine/Simulation/SimData.h"
-#include "Engine/Simulation/ParticleData.h"
-#include "Engine/Simulation/HashGridData.h"
 #include <utility>
 
 class SimulationManager{
@@ -65,7 +63,8 @@ private:
 
         return data;
     }
-    void ValidateRenderGrid(); // Honorable Hail mary function, forever imortalized for solving the fucked range bug for dense render grid.
+    void ValidateRenderGrid(); // Do not remove, forever imortalized as the Hail mary function responsible for solving the fucked range bug for dense render grid.
+    bool ValidateHashGrid();
 
     // Simulation
     std::vector<class SimulationPipeline*> mPipelines;

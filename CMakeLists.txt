@@ -44,9 +44,7 @@ set(HEADERS
     src/Engine/Simulation/SimulationManager.h
     src/Engine/Simulation/SimulationPipeline.h
     src/Engine/Simulation/SimulationPass.h
-    src/Engine/Simulation/ParticleData.h
     src/Engine/Simulation/SimData.h
-    src/Engine/Simulation/HashGridData.h
     src/Shaders/Shader.h
     src/Shaders/VisShader.h
     src/Shaders/ComputeShader.h

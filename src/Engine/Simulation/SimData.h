@@ -5,6 +5,38 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
+
+// Particle Data
+// -----------------------------
+// cellSize >= smoothingRadius
+#define NUM_PARTICLE_MAX 10000
+constexpr float gParticleRadius = 0.5f;
+constexpr float gSmoothingRadius = 2.5f;
+
+struct Particle{
+    glm::vec3 mPosition;
+    float mRadius;
+    glm::vec3 mVelocity;
+    float mMass;
+    glm::vec4 mColor;
+};
+
+// Grid Data
+// -----------------------------
+constexpr glm::vec3 gGridBoundsMin = glm::vec3(-25);
+constexpr glm::vec3 gGridBoundsMax = glm::vec3(25);
+constexpr float gCellSize = 5.0f;
+const glm::ivec3 gGridSize = glm::ivec3(glm::ceil((gGridBoundsMax - gGridBoundsMin) / gCellSize));
+const int gCellCount = gGridSize.x * gGridSize.y * gGridSize.z;
+const int gNeighborRadius = int(ceil(gParticleRadius / gCellSize));
+
+struct HashEntry{
+    unsigned int mHash;
+    unsigned int mIndex;
+};
+
+// Simulation Data
+// -----------------------------
 using UniformCallback = std::function<void(class Shader*)>;
 using DispatchCallback = std::function<glm::ivec3()>;
 using ExecuteCallback = std::function<void(class SimulationPass*, glm::ivec3, glm::ivec3)>; // for custom execution code

@@ -62,6 +62,7 @@ uniform float particleRadius;
 uniform ivec3 gridSize;
 uniform vec3 gridMin;
 uniform vec3 gridMax;
+uniform int neighborRadius;
 uniform Camera camera;
 uniform BlackHole bh;
 
@@ -69,6 +70,7 @@ uniform BlackHole bh;
 const uint INVALID = 0xffffffffu;
 const float INF = 1e30;
 const float EPSILON = 1e-5;
+const ivec3 ZERO_CELL = ivec3(0);
 const vec4 blackHoleColor = vec4(0.0, 0.0, 0.0, 1.0);
 const bool enableDebugColor = true; // if false it disables debug color, making debug areas show as skybox
 const vec4 invalidColor = vec4(0.3, 0.3, 0.3, 1.0);
@@ -301,16 +303,14 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
         centredUV.y * camera.up
     );
 
-    // World (need ray stuff and used in ray stuff){
-    vec4 skyBoxColour = vec4(texture(skybox, rayDirection).rgb, 1.0);
-    // }
-
     vec3 rayOrigin = rayPositionInSimulationGrid(_texelCordId, rayDirection, rayEnd);
     if(!isVec3Valid(rayOrigin)){
         if(enableDebugColor)
             imageStore(imgOutput, _texelCordId, invalidColor);
-        else
+        else {
+            vec4 skyBoxColour = vec4(texture(skybox, rayDirection).rgb, 1.0);
             imageStore(imgOutput, _texelCordId, skyBoxColour);
+        }
         return;
     }
 
@@ -341,7 +341,7 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
     while(dda.t < rayEnd && dda.t < closestParticleT){
         
         // makes sure that current cell is valid for array
-        if (any(lessThan(dda.currentCell, ivec3(0))) ||
+        if (any(lessThan(dda.currentCell, ZERO_CELL)) ||
             any(greaterThanEqual(dda.currentCell, gridSize)))
         {
             break;
@@ -352,8 +352,6 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
         cellExitT = min(cellExitT, rayEnd);
         float segmentEnd = min(cellExitT, closestParticleT);
 
-        // Check every neighbouring cell within radius range
-        int neighborRadius = int(ceil(particleRadius / cellSize));
         for (int z = -neighborRadius; z <= neighborRadius; ++z)
         {
             for (int y = -neighborRadius; y <= neighborRadius; ++y)
@@ -365,7 +363,7 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
                     ivec3 neighborCell = dda.currentCell + ivec3(x, y, z);
 
                     // make sure its within bounds
-                    if (any(lessThan(neighborCell, ivec3(0))) ||
+                    if (any(lessThan(neighborCell, ZERO_CELL)) ||
                         any(greaterThanEqual(neighborCell, gridSize)))
                         continue;
 
@@ -381,24 +379,13 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
                     if (start == INVALID || end == INVALID)
                         continue;
 
-                    if (start >= entries.length())
-                        continue;
-
-                    end = min(end, uint(entries.length()));
-
-                    if (start >= end)
-                        continue;
-
                     for (uint i = start; i < end; ++i)
                     {
                         // process particles
                         uint particleIndex = entries[i].particleIndex;
-                        if (particleIndex == INVALID || particleIndex >= particles.length())
-                            continue;
-                        Particle particle = particles[particleIndex];
 
                         float hitT;
-                        if (RaySphereIntersection(rayOrigin, rayDirection, particle.position, particle.radius, dda.t, segmentEnd, hitT))
+                        if (RaySphereIntersection(rayOrigin, rayDirection, particles[particleIndex].position, particles[particleIndex].radius, dda.t, segmentEnd, hitT))
                         {
                             if(hitT < closestParticleT){
                                 closestParticleT = hitT;
@@ -417,10 +404,10 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
     if(blackHoleHit && blackHoleT <= closestParticleT){
         imageStore(imgOutput, _texelCordId, blackHoleColor);
     } else if(closestParticle != INVALID){
-        //vec4 color = particles[closestParticle].color;
-        vec4 color = vec4(1.0,0.0,0.0,1.0);
+        vec4 color = particles[closestParticle].color;
         imageStore(imgOutput, _texelCordId, color);
     } else {
+        vec4 skyBoxColour = vec4(texture(skybox, rayDirection).rgb, 1.0);
         imageStore(imgOutput, _texelCordId, skyBoxColour);
     }
 
