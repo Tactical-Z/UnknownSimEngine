@@ -15,6 +15,7 @@ struct Camera{
 struct BlackHole{
     vec3 position;
     float radius;
+    float mass;
 };
 
 struct DDARay{
@@ -57,6 +58,8 @@ layout (rgba32f, binding = 0) uniform image2D imgOutput;
 layout(binding = 0) uniform samplerCube skybox;
 
 // Uniforms
+uniform float C; 
+uniform float G;
 uniform float cellSize;
 uniform float particleRadius;
 uniform ivec3 gridSize;
@@ -281,6 +284,62 @@ bool RayIntersectsExpandedCell(vec3 _rayOrigin, vec3 _rayDirection, float _tMin,
     return RayVsAABB(_rayOrigin, _rayDirection, cellMin, cellMax, _tMin, _tMax, nearT, farT);
 }
 
+void UpdateRayDirectionWithGravitationalLensing(inout vec3 _rayDirection, vec3 _rayOrigin){
+
+    // do half, then do again, like with gravitation?
+    
+    
+    // radius between bh and light
+    vec3 rvec = bh.position - _rayOrigin;
+    float r = length(rvec);
+    rvec = normalize(rvec);
+
+    // deflection angle
+    float deflection = ((4 * G * bh.mass) / ((C * C) * r));
+    
+    // apply deflection
+    // Rodrigues' rotation formula
+    _rayDirection = _rayDirection * cos(deflection) + cross(_rayDirection, rvec) * sin(deflection) + rvec * dot(_rayDirection, rvec) * (1 - cos(deflection));
+}
+
+void ApplyGravitationalLensing(inout DDARay _dda, inout vec3 _rayDirection, vec3 _rayOrigin){
+
+    // 1. Update ray direction
+    // -----------------------------
+    UpdateRayDirectionWithGravitationalLensing(_rayDirection, _rayOrigin);
+
+    // 2. recalculate dda veriables after new direction determined
+    // -------------------------------
+
+    // Distance along ray between boundries
+    _dda.tDelta = vec3(
+        _rayDirection.x != 0.0 ? abs(cellSize / _rayDirection.x) : 1.0 / INF,
+        _rayDirection.y != 0.0 ? abs(cellSize / _rayDirection.y) : 1.0 / INF,
+        _rayDirection.z != 0.0 ? abs(cellSize / _rayDirection.z) : 1.0 / INF
+    );
+
+    // direction of stepping (1 or -1) in each axis
+    _dda.stepDirection = ivec3(
+        _rayDirection.x >= 0.0 ? 1 : -1,
+        _rayDirection.y >= 0.0 ? 1 : -1,
+        _rayDirection.z >= 0.0 ? 1 : -1
+    );
+
+    // Distance to next boundry
+    vec3 cellMin = gridMin + vec3(_dda.currentCell) * cellSize;
+    vec3 cellMax = cellMin + vec3(cellSize);
+    vec3 nextBoundary = vec3(
+        _dda.stepDirection.x > 0 ? cellMax.x : cellMin.x,
+        _dda.stepDirection.y > 0 ? cellMax.y : cellMin.y,
+        _dda.stepDirection.z > 0 ? cellMax.z : cellMin.z
+    );
+    _dda.tMax = vec3(
+        _rayDirection.x != 0.0 ? (nextBoundary.x - _rayOrigin.x) / _rayDirection.x : 1.0 / INF,
+        _rayDirection.y != 0.0 ? (nextBoundary.y - _rayOrigin.y) / _rayDirection.y : 1.0 / INF,
+        _rayDirection.z != 0.0 ? (nextBoundary.z - _rayOrigin.z) / _rayDirection.z : 1.0 / INF
+    );
+}
+
 // Main raytrace function
 void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
 {
@@ -396,6 +455,9 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
                 }
             }
         }
+
+        // Before advancing dda (moving to next cell), recalculate ray direction based in gravitational inflection
+        ApplyGravitationalLensing(dda, rayDirection, rayOrigin);
         AdvanceDDA(dda);
     }
 

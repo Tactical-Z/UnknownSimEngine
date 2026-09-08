@@ -9,7 +9,7 @@
 // Particle Data
 // -----------------------------
 // cellSize >= smoothingRadius
-#define NUM_PARTICLE_MAX 10000
+#define NUM_PARTICLE_MAX 0
 constexpr float gParticleRadius = 0.5f;
 constexpr float gSmoothingRadius = 2.5f;
 

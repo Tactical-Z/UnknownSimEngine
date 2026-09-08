@@ -140,7 +140,7 @@ void FindNeighbours(uint _particleIndex)
             }
         }
     }
-    float neighbourRatio = clamp(float(numNeighbours) / 500.0, 0.0, 1.0);
+    float neighbourRatio = clamp(float(numNeighbours) / 2.0, 0.0, 1.0);
     neighbourColor = vec3(neighbourRatio, neighbourRatio, neighbourRatio);
     //neighbourColor = vec3(1.0 - neighbourRatio, neighbourRatio, 0.0);
     particles[_particleIndex].color.xyz = neighbourColor;

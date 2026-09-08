@@ -105,6 +105,7 @@ void Renderer::BindReferenceObjects(const Shader* _shader)
         if(blackHole){
             _shader->setVec3("bh.position", blackHole->GetPosition());
             _shader->setFloat("bh.radius", blackHole->GetRadius());
+            _shader->setFloat("bh.mass", blackHole->GetMass());
         }
         else {
             LOG_WARNING("No Black hole detected");
@@ -124,6 +125,8 @@ void Renderer::BindTextures(const class Shader* _shader)
 void Renderer::BindUniforms(const class Shader* _shader)
 {
     _shader->use();
+    _shader->setFloat("C", C);
+    _shader->setFloat("G", G);
     _shader->setFloat("cellSize", gCellSize);
     _shader->setFloat("particleRadius", gParticleRadius);
     _shader->setIVec3("gridSize", gGridSize);
