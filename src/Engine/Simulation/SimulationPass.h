@@ -1,6 +1,6 @@
 #pragma once
+#include "engine/simulation/SimData.h"
 
-#include "Engine/Simulation/SimData.h"
 #include <string>
 #include <vector>
 #include <glad/glad.h>

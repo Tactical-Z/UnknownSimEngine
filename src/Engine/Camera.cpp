@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "engine/Camera.h"
 
 Camera::Camera(glm::vec3 _position)
     :   mPosition(_position)
@@ -22,7 +22,7 @@ void Camera::UpdateDirectionVectors()
 
     mFront = glm::normalize(front);
 
-    glm::vec3 worldUp = WORLD_UP;
+    glm::vec3 worldUp = Math::Constants::WorldUP;
 
     mRight = glm::normalize(glm::cross(mFront, worldUp));
     mUp    = glm::normalize(glm::cross(mRight, mFront));

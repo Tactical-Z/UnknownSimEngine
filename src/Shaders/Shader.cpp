@@ -1,4 +1,11 @@
-#include "Shader.h"
+#include "shaders/Shader.h"
+#include "core/errorHandling/Log.h"
+
+Shader::Shader(Logger* _logger)
+    :   mLogger(_logger)
+{
+
+}
 
 void Shader::use() const
 {

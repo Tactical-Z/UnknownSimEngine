@@ -1,6 +1,5 @@
 #pragma once
-
-#include "Util/SMath.h"
+#include "util/Math.h"
 
 class Camera{
 public:

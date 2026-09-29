@@ -1,38 +1,39 @@
-#include "Engine/Rendering/Renderer.h"
-#include "Engine/Camera.h"
-#include "Engine/Simulation/SimData.h"
-#include "Engine/Simulation/SimulationPass.h"
-#include "Shaders/ComputeShader.h"
-#include "Shaders/VisShader.h"
-#include "Engine/Rendering/Texture.h"
-#include "Engine/Camera.h"
-#include "Engine/Objects.h"
+#include "engine/rendering/Renderer.h"
+#include "engine/Camera.h"
+#include "engine/simulation/SimData.h"
+#include "engine/simulation/SimulationPass.h"
+#include "shaders/ComputeShader.h"
+#include "shaders/VisShader.h"
+#include "engine/rendering/Texture.h"
+#include "engine/Camera.h"
+#include "engine/Objects.h"
 
-#include "Util/STime.h"
-#include "Util/Path.h"
-#include "Util/Log.h"
+#include "core/clock/Clock.h"
+#include "core/errorHandling/Log.h"
+#include "util/AppUtil.h"
 
 #include <glad/glad.h>
 
-Renderer::~Renderer(){
-    delete mDisplayTexture;
-    delete mVisShader;
-    delete mSkyboxTexture;
-    delete mRaytracePass;
-
-    // Not owned by this class
-    mCameraRef = nullptr;
-    mObjectsRef = nullptr;
-}
-
-void Renderer::Init(std::vector<SSBOBinding> _raytracerResources, const Camera* _camera, const std::vector<class Object*>* _objects)
+void Renderer::Init(Logger* _logger, Clock* _clock, std::vector<SSBOBinding> _raytracerResources, const Camera* _camera, const std::vector<class Object*>* _objects)
 {
+    mLogger = _logger;
+    mClock = _clock;
     mCameraRef = _camera;
     mObjectsRef = _objects;
 
     InitBuffers();
     InitShaders(_raytracerResources);
     InitTextures();
+}
+
+void Renderer::StartFrame()
+{
+
+}
+
+void Renderer::Update(const float& _dt)
+{
+
 }
 
 void Renderer::Render()
@@ -51,6 +52,24 @@ void Renderer::Render()
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+
+void Renderer::EndFrame()
+{
+
+}
+
+void Renderer::Shutdown()
+{
+    delete mDisplayTexture;
+    delete mVisShader;
+    delete mSkyboxTexture;
+    delete mRaytracePass;
+
+    // Not owned by this class
+    mCameraRef = nullptr;
+    mObjectsRef = nullptr;
+}
+
 void Renderer::InitBuffers()
 {
     glGenVertexArrays(1, &mVAO);
@@ -59,10 +78,10 @@ void Renderer::InitBuffers()
 
 void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
 {
-    mVisShader = new VisShader(PathUtil::shader_dir("general.vert"), PathUtil::shader_dir("general.frag"));
+    mVisShader = new VisShader(AppUtil::Path::shader_dir("general.vert"), AppUtil::Path::shader_dir("general.frag"), mLogger);
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT;
 
-    ComputeShader* rayTraceComputeShader = new ComputeShader(PathUtil::shader_dir("ray_tracer.comp"));
+    ComputeShader* rayTraceComputeShader = new ComputeShader(AppUtil::Path::shader_dir("ray_tracer.comp"), mLogger);
     std::vector<SSBOBinding> rayTraceResources = _raytracerResources;
     DispatchCallback rayTraceDispatchCountCallback = [this](){ return glm::ivec3(mWindowSize.x, mWindowSize.y, 1); };
     UniformCallback rayTraceTextureCallback = [this](Shader* _shader){ BindTextures(_shader); };
@@ -75,7 +94,7 @@ void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
 
 void Renderer::InitTextures()
 {
-    mSkyboxTexture = new Texture(PathUtil::skybox_files(PathUtil::asset_dir("skybox/blue/")));
+    mSkyboxTexture = new Texture(AppUtil::Path::skybox_files("skybox/blue/"));
     GenerateDisplayTexture();
 }
 
@@ -125,8 +144,8 @@ void Renderer::BindTextures(const class Shader* _shader)
 void Renderer::BindUniforms(const class Shader* _shader)
 {
     _shader->use();
-    _shader->setFloat("C", C);
-    _shader->setFloat("G", G);
+    _shader->setFloat("C", Math::Constants::LightSpeed);
+    _shader->setFloat("G", Math::Constants::GravitationalConstant);
     _shader->setFloat("cellSize", gCellSize);
     _shader->setFloat("particleRadius", gParticleRadius);
     _shader->setIVec3("gridSize", gGridSize);

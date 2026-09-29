@@ -457,7 +457,7 @@ void RaytracerMain(vec2 _imageSize, ivec2 _texelCordId, vec2 _uv)
         }
 
         // Before advancing dda (moving to next cell), recalculate ray direction based in gravitational inflection
-        ApplyGravitationalLensing(dda, rayDirection, rayOrigin);
+        //ApplyGravitationalLensing(dda, rayDirection, rayOrigin);
         AdvanceDDA(dda);
     }
 

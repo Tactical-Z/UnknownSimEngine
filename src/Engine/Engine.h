@@ -1,43 +1,47 @@
 #pragma once
 
-#include "Engine/EngineConfig.h"
-#include "Engine/Logger.h"
-#include "Engine/WindowManager.h"
-#include "Engine/Rendering/Renderer.h"
-#include "Engine/Rendering/UIManager.h"
-#include "Engine/Simulation/SimulationManager.h"
+#include "engine/EngineConfig.h"
+#include "engine/WindowManager.h"
+#include "engine/Rendering/Renderer.h"
+#include "engine/Rendering/UIManager.h"
+#include "engine/Simulation/SimulationManager.h"
 
 //Todo: add error detection for glFunctions
-
 class Engine
 {
 public:
     Engine() = default;
     Engine(struct EngineConfig _config);
-    ~Engine();
+    ~Engine() = default;
 
     void Init();
-
     void StartFrame();
-    void Update(float _dt);
+    void Update();
     void Render();
     void EndFrame();
     void Shutdown();
 
-private:
-
-    bool mEngineShouldRun = true;
-    EngineConfig mConfig;
-    Logger mLogger;
-    Renderer mRenderer;
-    
-    WindowManager mWindowManager;
-    UIManager mUIManager;
-    SimulationManager mSimulationManager;
-    std::vector<class Object*> mObjects;
-    class Camera* mCamera;
-public:
-
     void SetShouldRun(bool _b);
     bool ShouldRun();
+
+    Logger* GetLoggerRef();
+    Clock* GetClockRef();
+private:
+    Logger mLogger;
+    Clock mClock;
+
+
+    // Meta
+    bool mEngineShouldRun = true;
+    EngineConfig mConfig;
+
+    // App
+    WindowManager mWindowManager;
+    SimulationManager mSimulationManager;
+    Renderer mRenderer;
+    UIManager mUIManager;
+
+    std::vector<class Object*> mObjects;
+    class Camera* mCamera;
+
 };

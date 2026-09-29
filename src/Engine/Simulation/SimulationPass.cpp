@@ -1,12 +1,12 @@
-#include "Engine/Simulation/SimulationPass.h"
-#include "Shaders/ComputeShader.h"
-#include "Util/Path.h"
-#include "Util/Log.h"
+#include "engine/simulation/SimulationPass.h"
+#include "shaders/ComputeShader.h"
+#include "core/errorHandling/Log.h"
+#include "util/AppUtil.h"
 
 SimulationPass::SimulationPass(ComputeShader* _shader, std::vector<SSBOBinding>& _resources, DispatchCallback _dispatchCountCallback, std::vector<UniformCallback>& _uniforms, unsigned int _memoryBarrierFlag, ExecuteCallback _execute)
     :   mSolver(_shader), mResources(_resources), mDispatchCountCallback(_dispatchCountCallback), mUniforms(_uniforms), mMemoryBarrierFlags(_memoryBarrierFlag), mExecuteCallback(_execute)
 {
-    mName = PathUtil::GetFilenameWithoutExtension(mSolver->GetSrc());
+    mName = AppUtil::Path::GetFilenameWithoutExtension(mSolver->GetSrc());
     GLint size[3];
     glGetProgramiv(mSolver->mId, GL_COMPUTE_WORK_GROUP_SIZE, size);
     mWorkGroupSize = glm::ivec3(size[0],size[1],size[2]);
@@ -27,8 +27,8 @@ void SimulationPass::Execute()
     UpdateTimer();
     
     glBeginQuery(GL_TIME_ELAPSED, mTimeQuery);
-    if(!mDispatchCountCallback)
-        LOG_ERROR("SimulationPass: '{}' does not have valid dispatchCountCallback", mName);
+    //if(!mDispatchCountCallback)
+        //LOG_ERROR("SimulationPass: '{}' does not have valid dispatchCountCallback", mName); //TODO Somehow log here
     glm::ivec3 count = mDispatchCountCallback();
     glm::ivec3 groups = NumGroups(count);
     mSolver->use();

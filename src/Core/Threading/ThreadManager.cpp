@@ -1,15 +1,11 @@
 #include "ThreadManager.h"
 
-void ThreadManager::ThreadEntry(uint32_t _id, const char* _name, std::function<void()> _function)
+void ThreadManager::ThreadEntry(uint32_t _id, const char* _name, std::function<void(std::stop_token)> _function)
 {
-    ThreadContext context;
-
-    context.mID = _id;
-    context.mName = _name;
-
-    gCurrentThread = &context;
-
-    _function();
-
-    gCurrentThread = nullptr;
+    mThread = std::jthread(
+        [_id, _name, _function = std::move(_function)](std::stop_token _stop)
+        {
+            ThreadContext::Set(_id, _name);
+            _function(_stop);
+        });
 }

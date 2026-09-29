@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Util/SMath.h"
+#include "util/math.h"
 
 class Object
 {

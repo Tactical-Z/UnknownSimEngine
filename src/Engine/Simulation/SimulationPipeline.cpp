@@ -1,5 +1,5 @@
-#include "Engine/Simulation/SimulationPipeline.h"
-#include "Engine/Simulation/SimulationPass.h"
+#include "engine/simulation/SimulationPipeline.h"
+#include "engine/simulation/SimulationPass.h"
 
 SimulationPipeline::SimulationPipeline(std::string _name)
     :   mName(_name)

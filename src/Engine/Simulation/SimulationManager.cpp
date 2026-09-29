@@ -1,15 +1,52 @@
-#include "Engine/Simulation/SimulationManager.h"
-#include "Engine/Simulation/SimulationPipeline.h"
-#include "Engine/Simulation/SimulationPass.h"
-#include "Engine/Objects.h"
-#include "Shaders/ComputeShader.h"
-#include "Util/Log.h"
-#include "Util/Path.h"
-#include "Util/STime.h"
+#include "engine/simulation/SimulationManager.h"
+#include "engine/simulation/SimulationPipeline.h"
+#include "engine/simulation/SimulationPass.h"
+#include "engine/Objects.h"
+#include "shaders/ComputeShader.h"
+#include "core/errorHandling/Log.h"
+#include "core/clock/Clock.h"
+#include "util/AppUtil.h"
 
-#include <bit>
+//#include <bit>
 
-SimulationManager::~SimulationManager()
+void SimulationManager::Init(const std::vector<class Object*>& _referenceObjects, Logger* _logger, Clock* _clock)
+{
+    mLogger = _logger;
+    mClock = _clock;
+    mReferenceObjectsRef = &_referenceObjects;
+    
+    InitBuffers();
+
+    CreateGravityPipeline();
+    CreateSHGPipeline();
+    CreateSPHPipeline();
+    CreateDGPipeline();
+}
+
+void SimulationManager::StartFrame()
+{
+
+}
+
+void SimulationManager::Update(const float& _dt)
+{
+    for(SimulationPipeline* pipline : mPipelines){
+        pipline->ExecutePipeline();
+    }
+}
+
+void SimulationManager::Render()
+{
+
+}
+
+
+void SimulationManager::EndFrame()
+{
+
+}
+
+void SimulationManager::Shutdown()
 {
     for(SimulationPipeline* pipelines : mPipelines){
         delete pipelines;
@@ -25,163 +62,6 @@ SimulationManager::~SimulationManager()
     mCellStartBuffer.mId = 0;
     glDeleteBuffers(1, &mCellEndBuffer.mId);
     mCellEndBuffer.mId = 0;
-}
-
-void SimulationManager::Init(const std::vector<class Object*>& _referenceObjects)
-{
-    mReferenceObjectsRef = &_referenceObjects;
-    
-    InitBuffers();
-
-    CreateGravityPipeline();
-    CreateSHGPipeline();
-    CreateSPHPipeline();
-    CreateDGPipeline();
-}
-
-void SimulationManager::Update(float _dt)
-{
-    for(SimulationPipeline* pipline : mPipelines){
-        pipline->ExecutePipeline();
-    }
-
-    //ValidateHashGrid();
-    //ValidateRenderGrid();
-    //LOG_WARNING("Particles: ");
-    // auto particles = ReadBuffer(mParticleBuffer);
-    // for(uint32_t i = 0; i < particles.size(); i++)
-    // {
-    //     LOG_DEBUG("Index: {}, particle pos .x: {} .y:{} .z;{}", i, particles[i].mPosition.x, particles[i].mPosition.y, particles[i].mPosition.z);
-    // }
-    // auto particles = ReadBuffer(mParticleBuffer);
-    // auto entries   = ReadBuffer(mRenderGridBuffer);
-    // auto starts    = ReadBuffer(mRenderCellStartBuffer);
-    // auto ends      = ReadBuffer(mRenderCellEndBuffer);
-
-    // auto flags = ReadBuffer(mRenderCellFlagBuffer);
-
-    // uint32_t validRanges = 0;
-    // uint32_t maxEnd = 0;
-
-    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
-    // {
-    //     if (starts[cell] == UINT_MAX && ends[cell] == UINT_MAX)
-    //         continue;
-
-    //     LOG_DEBUG(
-    //         "RANGE cell={} start={} end={}",
-    //         cell,
-    //         starts[cell],
-    //         ends[cell]
-    //     );
-
-    //     validRanges++;
-    //     maxEnd = std::max(maxEnd, ends[cell]);
-    // }
-
-    // LOG_DEBUG("Valid ranges = {}, maxEnd = {}", validRanges, maxEnd);
-
-    // uint32_t flagCount = 0;
-
-    // for (uint32_t i = 0; i < 3000; ++i)
-    //     flagCount += flags[i];
-
-    // LOG_DEBUG("FLAG COUNT = {}", flagCount);
-
-    // LOG_DEBUG("End1");
-
-    // for (uint32_t i = 0; i < 30; ++i)
-    // {
-    //     LOG_DEBUG(
-    //         "FLAG[{}] hash={} flag={}",
-    //         i,
-    //         entries[i].mHash,
-    //         flags[i]
-    //     );
-    // }
-    // LOG_DEBUG("End2");
-
-    // uint32_t zCount[10] = {};
-
-    // for (uint32_t i = 0; i < particles.size(); ++i)
-    // {
-    //     glm::ivec3 cell = glm::ivec3(
-    //         glm::floor(
-    //             (particles[i].mPosition - gGridBoundsMin) / gCellSize
-    //         )
-    //     );
-
-    //     if (cell.x < 0 || cell.x >= 10 ||
-    //         cell.y < 0 || cell.y >= 10 ||
-    //         cell.z < 0 || cell.z >= 10)
-    //         continue;
-
-    //     zCount[cell.z]++;
-    // }
-    
-    // for (int z = 0; z < 10; ++z)
-    //     LOG_DEBUG("Z layer {}: {} particles", z, zCount[z]);
-
-    // LOG_DEBUG("End3");
-    // uint32_t total = 0;
-    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
-    // {
-    //     if (starts[cell] == UINT_MAX ||
-    //         ends[cell] == UINT_MAX)
-    //         continue;
-
-    //     total += ends[cell] - starts[cell];
-    // }
-
-    // LOG_DEBUG("Particles represented by ranges: {}", total);
-    // LOG_DEBUG("End4");
-
-    // for (uint32_t cell = 0; cell < gCellCount; ++cell)
-    // {
-    //     uint32_t start = starts[cell];
-    //     uint32_t end = ends[cell];
-
-    //     if (start == UINT_MAX)
-    //         continue;
-
-    //     for (uint32_t i = start; i < end; ++i)
-    //     {
-    //         uint32_t particle = entries[i].mIndex;
-            
-    //         if (particle == UINT_MAX || particle >= particles.size())
-    //         {
-    //             LOG_DEBUG(
-    //                 "BAD PARTICLE INDEX: cell={} i={} particle={}",
-    //                 cell, i, particle
-    //             );
-    //             continue;
-    //         }
-
-    //         // Calculate expected cell on CPU
-    //         glm::ivec3 expectedCell = glm::ivec3(
-    //             glm::floor(
-    //                 (particles[particle].mPosition - gGridBoundsMin)
-    //                 / gCellSize
-    //             )
-    //         );
-
-    //         uint32_t expectedIndex =
-    //             expectedCell.x +
-    //             expectedCell.y * gGridSize.x +
-    //             expectedCell.z * gGridSize.x * gGridSize.y;
-
-    //         if (expectedIndex != cell)
-    //         {
-    //             LOG_DEBUG(
-    //                 "BAD RANGE: cell={} particle={} expectedCell={}",
-    //                 cell,
-    //                 particle,
-    //                 expectedIndex
-    //             );
-    //         }
-    //     }
-    // }
-    // LOG_DEBUG("End5");
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
@@ -338,9 +218,9 @@ void SimulationManager::GenerateAccretionDiskParticles()
         // spawn particles in relation to refernce object.
         for(Particle& particle : mParticleBuffer.mBufferData)
         {
-            float randomAngle = SMath::RandomFloatByBounds(0, TWO_PI);
-            float randomRadius = SMath::RandomFloatByBounds(blackHole->GetRadius() + mRadiusSpawnBounds);
-            float randomZDeviation = SMath::RandomFloatByBounds(-0.05f, 0.05f);
+            float randomAngle = Math::RandomNumber::RandomFloatByBounds(0, Math::Constants::TwoPi);
+            float randomRadius = Math::RandomNumber::RandomFloatByBounds(blackHole->GetRadius() + mRadiusSpawnBounds);
+            float randomZDeviation = Math::RandomNumber::RandomFloatByBounds(-0.05f, 0.05f);
             particle.mPosition = glm::vec3( blackHole->GetPosition().x + (randomRadius * cos(randomAngle)),
                                             blackHole->GetPosition().y + (randomRadius * sin(randomAngle)),
                                             blackHole->GetPosition().z + (randomZDeviation));
@@ -348,7 +228,7 @@ void SimulationManager::GenerateAccretionDiskParticles()
             particle.mRadius = gParticleRadius;
             
             // finding tangental vector by differentiating inital position rotation. x: cos -> -sin, y: sin -> cos
-            float initalOrbitalVelocity = SMath::OrbitalVelocity(randomRadius, blackHole->GetMass());
+            float initalOrbitalVelocity = Math::Physics::OrbitalVelocity(randomRadius, blackHole->GetMass());
             particle.mVelocity = glm::vec3(-sin(randomAngle) * initalOrbitalVelocity,
                                             cos(randomAngle) * initalOrbitalVelocity,
                                             0);
@@ -373,7 +253,7 @@ void SimulationManager::CreateGravityPipeline()
     SimulationPipeline* gravityPipeline = new SimulationPipeline("Gravity Pipeline");
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
-    ComputeShader* gravityComputeShader = new ComputeShader(PathUtil::shader_dir("accretionDiskGravSolver.comp"));
+    ComputeShader* gravityComputeShader = new ComputeShader(AppUtil::Path::shader_dir("accretionDiskGravSolver.comp"), mLogger);
     std::vector<SSBOBinding> resources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId)};
     DispatchCallback DispatchCountCallback = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,0,0); };
     UniformCallback RefObjCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
@@ -391,7 +271,7 @@ void SimulationManager::CreateSHGPipeline()
     SimulationPipeline* shgPipeline = new SimulationPipeline("SHG Pipeline");
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
-    ComputeShader* shgHashComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_hash.comp"));
+    ComputeShader* shgHashComputeShader = new ComputeShader(AppUtil::Path::shader_dir("shg/shg_hash.comp"), mLogger);
     std::vector<SSBOBinding> hashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId), 
                                             SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId)};
     DispatchCallback DispatchCountCallbackHash = [this](){ return glm::ivec3(mHashBuffer.mTotalCount,1,1); };
@@ -406,7 +286,7 @@ void SimulationManager::CreateSHGPipeline()
     CreateFlagPass(shgPipeline, mHashBuffer, mCellFlagBuffer, mCellPrefixBuffer);
     CreateBlellochScanPass(shgPipeline, mCellPrefixBuffer, mCellCountBuffer);
 
-    ComputeShader* shgRangeStartComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_range_start.comp"));
+    ComputeShader* shgRangeStartComputeShader = new ComputeShader(AppUtil::Path::shader_dir("shg/shg_range_start.comp"), mLogger);
     std::vector<SSBOBinding> rangeStartResources = {SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
                                                 SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
                                                 SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
@@ -416,7 +296,7 @@ void SimulationManager::CreateSHGPipeline()
     SimulationPass* rangeStartPass = new SimulationPass(shgRangeStartComputeShader, rangeStartResources, DispatchCountCallbackRangeStart, uniformsRangeStart, passFlag);
     shgPipeline->AddPass(rangeStartPass);
 
-    ComputeShader* shgRangeEndComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_range_end.comp"));
+    ComputeShader* shgRangeEndComputeShader = new ComputeShader(AppUtil::Path::shader_dir("shg/shg_range_end.comp"), mLogger);
     std::vector<SSBOBinding> rangeEndResources = {SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
                                                 SSBOBinding(mCellEndBuffer.mBindingLocation, mCellEndBuffer.mId),
                                                 SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
@@ -426,14 +306,14 @@ void SimulationManager::CreateSHGPipeline()
     SimulationPass* rangeEndPass = new SimulationPass(shgRangeEndComputeShader, rangeEndResources, DispatchCountCallbackRangeEnd, uniformsRangeEnd, passFlag);
     shgPipeline->AddPass(rangeEndPass);
 
-    ComputeShader* shgResetLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_reset_lookup_table.comp"));
+    ComputeShader* shgResetLookUpComputeShader = new ComputeShader(AppUtil::Path::shader_dir("shg/shg_reset_lookup_table.comp"), mLogger);
     std::vector<SSBOBinding> ResetLookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId)};
     DispatchCallback DispatchCountCallbackResetLookUp = [this](){ return glm::ivec3(mHashLookupBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> uniformsResetLookUp = {};
     SimulationPass* ResetLookUpPass = new SimulationPass(shgResetLookUpComputeShader, ResetLookUpResources, DispatchCountCallbackResetLookUp, uniformsResetLookUp, passFlag);
     shgPipeline->AddPass(ResetLookUpPass);
 
-    ComputeShader* shgLookUpComputeShader = new ComputeShader(PathUtil::shader_dir("shg/shg_build_lookup_table.comp"));
+    ComputeShader* shgLookUpComputeShader = new ComputeShader(AppUtil::Path::shader_dir("shg/shg_build_lookup_table.comp"), mLogger);
     std::vector<SSBOBinding> LookUpResources = {SSBOBinding(mHashLookupBuffer.mBindingLocation, mHashLookupBuffer.mId),
                                                 SSBOBinding(mUniqueHashBuffer.mBindingLocation, mUniqueHashBuffer.mId),
                                                 SSBOBinding(mCellCountBuffer.mBindingLocation, mCellCountBuffer.mId)};
@@ -450,7 +330,7 @@ void SimulationManager::CreateSPHPipeline()
     SimulationPipeline* sphPipeline = new SimulationPipeline("SPH Pipeline");
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
-    ComputeShader* sphComputeShader = new ComputeShader(PathUtil::shader_dir("sph_particle.comp"));
+    ComputeShader* sphComputeShader = new ComputeShader(AppUtil::Path::shader_dir("sph_particle.comp"), mLogger);
     std::vector<SSBOBinding> sphResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
                                             SSBOBinding(mHashBuffer.mBindingLocation, mHashBuffer.mId),
                                             SSBOBinding(mCellStartBuffer.mBindingLocation, mCellStartBuffer.mId),
@@ -473,7 +353,7 @@ void SimulationManager::CreateDGPipeline()
     SimulationPipeline* dgPipeline = new SimulationPipeline("Dense Grid Pipeline");
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
 
-    ComputeShader* resetCellRangeComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_reset_range.comp"));
+    ComputeShader* resetCellRangeComputeShader = new ComputeShader(AppUtil::Path::shader_dir("dg/dg_reset_range.comp"), mLogger);
     std::vector<SSBOBinding> resetCellRangeResources = {SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
                                                 SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId)};
     DispatchCallback resetCellRangeDispatchCountCallback = [this](){ return glm::ivec3(mRenderCellStartBuffer.mActiveCount,1,1); };
@@ -481,7 +361,7 @@ void SimulationManager::CreateDGPipeline()
     SimulationPass* resetCellRangePass = new SimulationPass(resetCellRangeComputeShader, resetCellRangeResources, resetCellRangeDispatchCountCallback, resetCellRangeUniforms, passFlag);
     dgPipeline->AddPass(resetCellRangePass);
 
-    ComputeShader* gridHashComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_grid_hash.comp"));
+    ComputeShader* gridHashComputeShader = new ComputeShader(AppUtil::Path::shader_dir("dg/dg_grid_hash.comp"), mLogger);
     std::vector<SSBOBinding> gridHashResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
                                                 SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId)};
     DispatchCallback gridHashDispatchCountCallback = [this](){ return glm::ivec3(mRenderGridBuffer.mActiveCount,1,1); };
@@ -496,7 +376,7 @@ void SimulationManager::CreateDGPipeline()
     CreateFlagPass(dgPipeline, mRenderGridBuffer, mRenderCellFlagBuffer, mRenderCellPrefixBuffer);
     CreateBlellochScanPass(dgPipeline, mRenderCellPrefixBuffer, mRenderCellCountBuffer);
 
-    ComputeShader* cellRangeComputeShader = new ComputeShader(PathUtil::shader_dir("dg/dg_range.comp"));
+    ComputeShader* cellRangeComputeShader = new ComputeShader(AppUtil::Path::shader_dir("dg/dg_range.comp"), mLogger);
     std::vector<SSBOBinding> cellRangeResources = {SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId),
                                                 SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
                                                 SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId),
@@ -512,7 +392,7 @@ void SimulationManager::CreateDGPipeline()
 void SimulationManager::CreateBitonicSortPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer)
 {
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
-    ComputeShader* sortComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_bitonic_sort.comp"));
+    ComputeShader* sortComputeShader = new ComputeShader(AppUtil::Path::shader_dir("universal/u_bitonic_sort.comp"), mLogger);
     std::vector<SSBOBinding> sortResources = {SSBOBinding(_gridBuffer.mBindingLocation, _gridBuffer.mId)};
     DispatchCallback sortDispatchCountCallback = [this, &_gridBuffer](){ return glm::ivec3(_gridBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> sortUniforms = {};
@@ -524,7 +404,7 @@ void SimulationManager::CreateBitonicSortPass(SimulationPipeline* _pipeline, GPU
 void SimulationManager::CreateFlagPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer, GPUBuffer<uint32_t>& _flagBuffer, GPUBuffer<uint32_t>& _prefixBuffer)
 {
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
-    ComputeShader* computeShader = new ComputeShader(PathUtil::shader_dir("universal/u_hash_entry_flag.comp"));
+    ComputeShader* computeShader = new ComputeShader(AppUtil::Path::shader_dir("universal/u_hash_entry_flag.comp"), mLogger);
     std::vector<SSBOBinding> resources = {SSBOBinding(_gridBuffer.mBindingLocation, _gridBuffer.mId),
                                             SSBOBinding(_flagBuffer.mBindingLocation, _flagBuffer.mId),
                                             SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
@@ -537,7 +417,7 @@ void SimulationManager::CreateFlagPass(SimulationPipeline* _pipeline, GPUBuffer<
 void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GPUBuffer<uint32_t>& _prefixBuffer, GPUBuffer<uint32_t>& _countBuffer)
 {
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
-    ComputeShader* upScanComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_up_scan.comp"));
+    ComputeShader* upScanComputeShader = new ComputeShader(AppUtil::Path::shader_dir("universal/u_blelloch_up_scan.comp"), mLogger);
     std::vector<SSBOBinding> upScanResources = {SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback upScanDispatchCountCallback = [this, &_prefixBuffer](){ return glm::ivec3(_prefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> upScanUniforms = {};
@@ -545,7 +425,7 @@ void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GP
     SimulationPass* upScanPass = new SimulationPass(upScanComputeShader, upScanResources, upScanDispatchCountCallback, upScanUniforms, passFlag, upScanExecuteCallback);
     _pipeline->AddPass(upScanPass);
 
-    ComputeShader* resetComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_reset.comp"));
+    ComputeShader* resetComputeShader = new ComputeShader(AppUtil::Path::shader_dir("universal/u_blelloch_reset.comp"), mLogger);
     std::vector<SSBOBinding> resetResources = {SSBOBinding(_countBuffer.mBindingLocation, _countBuffer.mId),
                                                 SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback resetDispatchCountCallback = [this](){ return glm::ivec3(1,1,1); };
@@ -553,7 +433,7 @@ void SimulationManager::CreateBlellochScanPass(SimulationPipeline* _pipeline, GP
     SimulationPass* resetPass = new SimulationPass(resetComputeShader, resetResources, resetDispatchCountCallback, resetUniforms, passFlag);
     _pipeline->AddPass(resetPass);
 
-    ComputeShader* downScanComputeShader = new ComputeShader(PathUtil::shader_dir("universal/u_blelloch_down_scan.comp"));
+    ComputeShader* downScanComputeShader = new ComputeShader(AppUtil::Path::shader_dir("universal/u_blelloch_down_scan.comp"), mLogger);
     std::vector<SSBOBinding> downScanResources = {SSBOBinding(_prefixBuffer.mBindingLocation, _prefixBuffer.mId)};
     DispatchCallback downScanDispatchCountCallback = [this, &_prefixBuffer](){ return glm::ivec3(_prefixBuffer.mTotalCount,1,1); };
     std::vector<UniformCallback> downScanUniforms = {};
@@ -595,26 +475,26 @@ void SimulationManager::BindCallback(class Shader* _shader, const char* _varName
 void SimulationManager::BindDTCallback(Shader* _shader)
 {
     _shader->use();
-    float dt = STime::GetDeltaTime() * mSimulationSpeed;
+    float dt = mClock->GetDeltaTime() * mSimulationSpeed;
     _shader->setFloat("dt", dt);
 }
 
 void SimulationManager::BindCCallback(class Shader* _shader)
 {
     _shader->use();
-    _shader->setInt("C", C);
+    _shader->setInt("C", Math::Constants::LightSpeed);
 }
 
 void SimulationManager::BindGCallback(class Shader* _shader)
 {
     _shader->use();
-    _shader->setInt("G", G);
+    _shader->setInt("G", Math::Constants::GravitationalConstant);
 }
 
 void SimulationManager::BindSCallback(class Shader* _shader)
 {
     _shader->use();
-    _shader->setInt("S", S);
+    _shader->setInt("S", Math::Constants::SchwarzschildTime);
 }
 
 // ToDo:Update function to take in relative active count based on task, for now it is hardcoded to particles

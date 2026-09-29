@@ -41,19 +41,25 @@ public:
     WindowManager() = default;
     ~WindowManager() = default;
 
-    void Init(const char* _windowName);
+    void Init(const char* _windowName, class Logger* _logger);
+    void StartFrame();
+    void Update(const float& _dt);
+    void Render();
+    void EndFrame();
     void Shutdown();
-    void PollEvents();
-    void ClearGLBuffer();
-    void SwapBuffers();
 
     // 1 full screen, 2 is boarderless fullscreen, 3 is windowed.
     void ToggleWindowMode(int _mode);
   
 private:
+    class Logger* mLogger = nullptr;
     UpdateWindowSizeCallback mUpdateWindowSizeCallback;
     struct GLFWwindow* mGLFWWindow = nullptr;
     WindowSettings mSettings;
+
+    void PollEvents();
+    void ClearGLBuffer();
+    void SwapBuffers();
 
     void InitGLFW();
     bool InitWindow();

@@ -11,14 +11,15 @@ public:
     std::string mSrc = "";
 
     Shader() = default;
+    Shader(class Logger* _logger);
     ~Shader() = default;
-
+    
     // Setts this shader to be used for gl context.
     void use() const;
 
     std::string GetSrc();
 protected:
-
+    class Logger* mLogger;
     std::string ReadSorceCode(const std::string& _filePath);
 
 public:

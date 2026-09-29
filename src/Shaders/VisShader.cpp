@@ -1,11 +1,12 @@
-#include <Shaders/VisShader.h>
-#include <Util/Log.h>
+#include <shaders/VisShader.h>
+#include <core/errorHandling/Log.h>
 
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
-VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmentPath)
+VisShader::VisShader(const std::string& _vertexPath, const std::string& _fragmentPath, Logger* _logger)
+    :   Shader(_logger)
 {
     std::string vShaderCodeString = ReadSorceCode(_vertexPath);
     std::string fShaderCodeString = ReadSorceCode(_fragmentPath);

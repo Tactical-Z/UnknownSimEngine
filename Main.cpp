@@ -1,5 +1,5 @@
 
-#include "Core/Application.h"
+#include "core/Application.h"
 
 int main(int arg, char* args){
 

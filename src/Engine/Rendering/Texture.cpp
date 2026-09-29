@@ -1,6 +1,6 @@
+#include "engine/rendering/Texture.h"
+#include "core/errorhandling/Log.h"
 
-#include "Texture.h"
-#include "Util/Log.h"
 #include <glad/glad.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -86,7 +86,7 @@ TextureID Texture::LoadTexture(const std::string& _path)
 		glGenerateMipmap(GL_TEXTURE_2D);
 	} else
 	{
-		LOG_ERROR("Texture Load Failed: {}", _path.c_str());
+		//LOG_ERROR("Texture Load Failed: {}", _path.c_str()); // TODO make a resource manager to load textures with logging
 	}
 	stbi_image_free(data);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -114,7 +114,7 @@ TextureID Texture::GenSkybox(const std::vector<std::string>& _texturePaths)
 		}
 		else
 		{
-			LOG_ERROR("Cubemap texture failed to load at location: {}", texturePath.c_str());
+			//LOG_ERROR("Cubemap texture failed to load at location: {}", texturePath.c_str());
 		}
 		stbi_image_free(data);
 	}

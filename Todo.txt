@@ -1,4 +1,7 @@
 
-1. Gravitational Lensing
-2. Accretion particle volume
-3. Accretion particle physics
+1. Logger and clock pass to major manager
+2. fix math and namespace stuff, 
+3. fix errors so that it runns 
+4. Make window.h controlled by window manager
+5. make viewport for ui
+6. ad d ui functionality 

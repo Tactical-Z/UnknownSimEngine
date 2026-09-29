@@ -1,9 +1,10 @@
-#include "Shaders/ComputeShader.h"
-#include "Util/Log.h"
+#include "shaders/ComputeShader.h"
+#include "core/errorHandling/Log.h"
+
 #include <glad/glad.h>
 
-
-ComputeShader::ComputeShader(const std::string& _computePath)
+ComputeShader::ComputeShader(const std::string& _computePath, Logger* _logger)
+    :   Shader(_logger)
 {
     mSrc = _computePath;
     std::string sourceCodeString = ReadSorceCode(_computePath);

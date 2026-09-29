@@ -1,19 +1,30 @@
 #pragma once
+#include "engine/simulation/SimData.h"
 
-#include "Engine/Simulation/SimData.h"
 #include <utility>
 
 class SimulationManager{
 public:
     SimulationManager() = default;
-    ~SimulationManager();
+    ~SimulationManager() = default;
 
-    void Init(const std::vector<class Object*>& _referenceObjects);
-    void Update(float _dt);
+    void Init(const std::vector<class Object*>& _referenceObjects, class Logger* _logger, class Clock* _clock);
+    void StartFrame();
+    void Update(const float& _dt);
+    void Render();
+    void EndFrame();
+    void Shutdown();
 
     void BindBuffer(GLint _bufferID, int _layout);
-
+    
+    class BlackHole* GetBlackHoleRefObject();
+    float& GetSimulationSpeedRef();
+    std::vector<SSBOBinding> GetRaytracerResources();
+    std::vector<std::pair<const char*, float>> GetSimulationUIData();
 private:
+    class Logger* mLogger = nullptr;
+    class Clock* mClock = nullptr;
+
     // --- GPU buffers ---
     GPUBuffer<Particle> mParticleBuffer;
     
@@ -106,16 +117,8 @@ private:
     void BindCellSizeCallback(class Shader* _shader);
     void BindSPHSmoothingRadius(class Shader* _shader);
 
-    
     // ToDo: Update to use dynamic group allocation, currently only uses X invocation slot.
     void BindCustomExecuet_BitonicSort(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
     void BindCustomExecuet_BlellochScan_Up(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
     void BindCustomExecuet_BlellochScan_Down(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups);
-
-public:
-
-    class BlackHole* GetBlackHoleRefObject();
-    float& GetSimulationSpeedRef();
-    std::vector<SSBOBinding> GetRaytracerResources();
-    std::vector<std::pair<const char*, float>> GetSimulationUIData();
 };

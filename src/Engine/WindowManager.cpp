@@ -1,5 +1,5 @@
-#include "WindowManager.h"
-#include "Util/Log.h"
+#include "engine/WindowManager.h"
+#include "core/errorHandling/Log.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -13,8 +13,9 @@ static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _heig
     windowManager->GetWindowSettingsPtr()->mCurrentHeight = _height;
 }
 
-void WindowManager::Init(const char* _windowName)
+void WindowManager::Init(const char* _windowName, Logger* _logger)
 {
+    mLogger = _logger;
     InitGLFW(); // glfw should be engnie wide not window wide. 
     mSettings.mWindowName = _windowName;
     InitWindow();
@@ -22,6 +23,27 @@ void WindowManager::Init(const char* _windowName)
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 };
+
+void WindowManager::StartFrame()
+{
+    PollEvents();
+    ClearGLBuffer();
+}
+
+void WindowManager::Update(const float& _dt)
+{
+
+}
+
+void WindowManager::Render()
+{
+
+}
+
+void WindowManager::EndFrame()
+{
+    SwapBuffers();
+}
 
 void WindowManager::Shutdown()
 {
@@ -65,7 +87,7 @@ void WindowManager::ToggleWindowMode(int _mode){
         SetWindowed();
         break;
     default:
-        LOG_WARNING("Set window Mode failed, mode: '%i' does not exist", _mode);
+        LOG_WARNING("Set window Mode failed, mode: {} does not exist", _mode);
         break;
     }
 }
