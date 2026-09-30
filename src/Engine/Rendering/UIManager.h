@@ -18,6 +18,9 @@ public:
     void EndFrame();
     void Shutdown();
 
+    void BindRayTraceTextureBuffer();
+    glm::ivec2 GetRenderSize();
+
     void SetExitCallback(CallbackVoidNull _callback);
     void SetToggleWindowModeCallback(CallbackVoidInt _callback);
     void SetGetCameraReferenceCallback(CallbackCameraRefNull _callback);
@@ -28,6 +31,9 @@ private:
     // Util
     class Logger* mLogger = nullptr;
     class Clock* mClock = nullptr;
+
+    // World Data
+    class Texture* mSkyboxTexture = nullptr;
 
     // Callbacks
     CallbackVoidNull mExitCallback;
@@ -49,6 +55,8 @@ private:
     // Viewport //
     const char* mName_Window_Viewport = "Viewport";
     bool mEnable_Window_Viewport = true;
+    ImVec2 mViewport_RenderArea = ImVec2(0.f, 0.f);
+    class Texture* mDisplayTexture = nullptr;
     void UI_Viewport();
 
     // Camera //

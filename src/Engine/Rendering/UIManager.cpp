@@ -2,6 +2,7 @@
 #include "engine/Camera.h"
 #include "core/clock/Clock.h"
 #include "util/AppUtil.h"
+#include "Engine/Rendering/Texture.h"
 
 #include <GLFW/glfw3.h>
 
@@ -14,6 +15,10 @@ void UIManager::Init(GLFWwindow* _window, Logger* _logger, Clock* _clock)
 {   
     mLogger = _logger;
     mClock = _clock;
+
+    mSkyboxTexture = new Texture(AppUtil::Path::skybox_files("skybox/blue/"));
+    mDisplayTexture = new Texture(935, 685);
+    //mDisplayTexture = new Texture(AppUtil::Path::asset_dir("images.png"));
     InitImGui(_window);
 }
 
@@ -50,7 +55,24 @@ void UIManager::EndFrame()
 
 void UIManager::Shutdown()
 {
+    delete mDisplayTexture;
+    delete mSkyboxTexture;
     ShutdownImGui();
+}
+
+void UIManager::BindRayTraceTextureBuffer()
+{
+    if(!mDisplayTexture || !mSkyboxTexture)
+        return;
+
+    // TODO: put texture type inside bind funcion, no reason to be out here.
+    //mDisplayTexture->Bind(0, TextureType::TT_IMAGE2D);
+    //mSkyboxTexture->Bind(0, TextureType::TT_SAMPLERCUBE);
+}
+
+glm::ivec2 UIManager::GetRenderSize()
+{
+    return glm::ivec2(mViewport_RenderArea.x, mViewport_RenderArea.y);
 }
 
 void UIManager::InitImGui(GLFWwindow* _window)
@@ -209,11 +231,12 @@ void UIManager::UI_Viewport()
         return;
     }
 
-    float spacingx = ImGui::GetContentRegionAvail().x * mAppData_sectionWidth_scale;
-    float spacingy = ImGui::GetContentRegionAvail().y * mAppData_sectionHeight_scale;
+    float spacingx = ImGui::GetContentRegionAvail().x;
+    float spacingy = ImGui::GetContentRegionAvail().y;
     ImVec2 spacing = ImVec2(spacingx, spacingy);
-
-    // TODO: Viewport stuff goes here:
+    mViewport_RenderArea = spacing;
+    if(mDisplayTexture)
+        ImGui::Image((void*)(intptr_t)mDisplayTexture->mID, mViewport_RenderArea);
 
     ImGui::End();
 }

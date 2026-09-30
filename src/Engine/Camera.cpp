@@ -1,4 +1,5 @@
 #include "engine/Camera.h"
+#include "Shaders/Shader.h"
 
 Camera::Camera(glm::vec3 _position)
     :   mPosition(_position)
@@ -10,6 +11,17 @@ Camera::Camera(glm::vec3 _position, float _pich, float _yaw)
     :   mPosition(_position)
 {
     SetRotationPY(_pich, _yaw);
+}
+
+void Camera::BindCamera(const Shader* _shader)
+{
+    _shader->use();
+    _shader->setVec3("camera.position", GetPosition());
+    _shader->setVec3("camera.up", GetUp());
+    _shader->setVec3("camera.right", GetRight());
+    _shader->setVec3("camera.front", GetFront());
+    _shader->setFloat("camera.fov", GetFov());
+    _shader->setFloat("camera.maxRayLength", GetFarplane());
 }
 
 void Camera::UpdateDirectionVectors()

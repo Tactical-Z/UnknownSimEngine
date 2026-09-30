@@ -1,6 +1,7 @@
 #include "engine/Engine.h"
 #include "engine/Camera.h"
 #include "engine/Objects.h"
+#include "Shaders/Shader.h"
 
 #include "glad/glad.h"
 
@@ -23,11 +24,15 @@ void Engine::Init()
     // Window
     const char* windowName = "Black Hole Simulation";
     mWindowManager.Init(windowName, loggerRef);
-    mWindowManager.SetUpdateWindowSizeCallback([this](glm::ivec2 _size){ mRenderer.SetWindowSize(_size); });
+    //mWindowManager.SetUpdateWindowSizeCallback([this](glm::ivec2 _size){ mRenderer.SetWindowSize(_size); });
     // Simulation
     mSimulationManager.Init(mObjects, loggerRef, clockRef);
-    // Renderer
-    mRenderer.Init(loggerRef, clockRef, mSimulationManager.GetRaytracerResources(), mCamera, &mObjects);
+    mSimulationManager.SetGetWindowSizeCallback([this]() -> glm::ivec2 {return mUIManager.GetRenderSize();});
+    mSimulationManager.SetBindTextureRaytracerCallback([this](const Shader* _shader) {mUIManager.BindRayTraceTextureBuffer();});
+    mSimulationManager.SetBindCameraUniformCallback([this](const Shader* _shader) {mCamera->BindCamera(_shader);});
+
+    // Renderer 
+    //mRenderer.Init(loggerRef, clockRef, mSimulationManager.GetRaytracerResources(), mCamera, &mObjects);
     // UI
     mUIManager.Init(mWindowManager.GetGLFWWindowPtr(), loggerRef, clockRef);
     mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
@@ -42,7 +47,7 @@ void Engine::StartFrame()
     GetClockRef()->Update();
     mWindowManager.StartFrame(); // First
     mSimulationManager.StartFrame();
-    mRenderer.StartFrame();
+    //mRenderer.StartFrame();
     mUIManager.StartFrame();
 }
 
@@ -51,7 +56,7 @@ void Engine::Update()
     float dt = GetClockRef()->GetDeltaTime();
     mWindowManager.Update(dt);
     mSimulationManager.Update(dt);
-    mRenderer.Update(dt);
+    //mRenderer.Update(dt);
     mUIManager.Update(dt);
 }
 
@@ -59,14 +64,14 @@ void Engine::Render()
 {
     mWindowManager.Render();
     mSimulationManager.Render();
-    mRenderer.Render();
+    //mRenderer.Render();
     mUIManager.Render(); // not uidraw()
 }
 
 void Engine::EndFrame()
 {
     mUIManager.EndFrame();
-    mRenderer.EndFrame();
+    //mRenderer.EndFrame();
     mSimulationManager.EndFrame();
     mWindowManager.EndFrame(); // Last
 }
@@ -76,7 +81,7 @@ void Engine::Shutdown()
     // managers
     mWindowManager.Shutdown();
     mSimulationManager.Shutdown();
-    mRenderer.Shutdown();
+    //mRenderer.Shutdown();
     mUIManager.Shutdown();
 
     // Other

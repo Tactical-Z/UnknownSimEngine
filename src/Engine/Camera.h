@@ -8,6 +8,8 @@ public:
     Camera(glm::vec3 _position, float _pich, float _yaw);
     ~Camera() = default;
 
+    void BindCamera(const class Shader* _shader);
+
 private:
 
     glm::vec3 mPosition = glm::vec3(-40.0f, 0.0f, 0.0f);

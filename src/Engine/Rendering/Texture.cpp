@@ -141,6 +141,29 @@ TextureID Texture::MakeBlankTexture(unsigned int _width, unsigned int _height){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
+	// TODODO
+	CONTEINUE WORKING HERE
+    // Fill the texture with the desired color
+    std::vector<float> pixels(_width * _height * 4);
+
+    for (unsigned int i = 0; i < _width * _height; ++i)
+    {
+        pixels[i * 4 + 0] = 1;
+        pixels[i * 4 + 1] = 0;
+        pixels[i * 4 + 2] = 0;
+        pixels[i * 4 + 3] = 1;
+    }
+
+    glTexSubImage2D(
+        GL_TEXTURE_2D,
+        0,
+        0, 0,
+        _width, _height,
+        GL_RGBA,
+        GL_FLOAT,
+        pixels.data()
+    );
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return texID;

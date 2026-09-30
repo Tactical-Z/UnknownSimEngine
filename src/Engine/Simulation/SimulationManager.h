@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/simulation/SimData.h"
+#include "core/AppData.h"
 
 #include <utility>
 
@@ -19,11 +20,22 @@ public:
     
     class BlackHole* GetBlackHoleRefObject();
     float& GetSimulationSpeedRef();
-    std::vector<SSBOBinding> GetRaytracerResources();
     std::vector<std::pair<const char*, float>> GetSimulationUIData();
+
+    void SetGetWindowSizeCallback(CallbackiVec2Null _cb);
+    void SetBindTextureRaytracerCallback(UniformCallback _cb);
+    void SetBindCameraUniformCallback(UniformCallback _cb);
+
 private:
+    // --- Util ---
     class Logger* mLogger = nullptr;
     class Clock* mClock = nullptr;
+
+    // --- Callbacks ---
+    CallbackiVec2Null mWindowSizeCallback;
+    UniformCallback mBindTextureBuffer;
+    UniformCallback mBindCameraUniformCallback;
+
 
     // --- GPU buffers ---
     GPUBuffer<Particle> mParticleBuffer;
@@ -96,6 +108,7 @@ private:
     void CreateSHGPipeline();
     void CreateSPHPipeline();
     void CreateDGPipeline();
+    void CreateRayTracePipeline();
 
     // Helper pipeline creation functions
     void CreateBitonicSortPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer);

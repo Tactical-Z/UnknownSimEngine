@@ -7,20 +7,19 @@
 #include "core/clock/Clock.h"
 #include "util/AppUtil.h"
 
-//#include <bit>
-
 void SimulationManager::Init(const std::vector<class Object*>& _referenceObjects, Logger* _logger, Clock* _clock)
 {
     mLogger = _logger;
     mClock = _clock;
     mReferenceObjectsRef = &_referenceObjects;
-    
+
     InitBuffers();
 
     CreateGravityPipeline();
     CreateSHGPipeline();
     CreateSPHPipeline();
     CreateDGPipeline();
+    CreateRayTracePipeline();
 }
 
 void SimulationManager::StartFrame()
@@ -248,6 +247,21 @@ void SimulationManager::GenerateAccretionDiskParticles()
     }
 }
 
+void SimulationManager::SetGetWindowSizeCallback(CallbackiVec2Null _cb)
+{
+    mWindowSizeCallback = _cb;
+}
+
+void SimulationManager::SetBindTextureRaytracerCallback(UniformCallback _cb)
+{
+    mBindTextureBuffer = _cb;
+}
+
+void SimulationManager::SetBindCameraUniformCallback(UniformCallback _cb)
+{
+    mBindCameraUniformCallback = _cb;
+}
+
 void SimulationManager::CreateGravityPipeline()
 {
     SimulationPipeline* gravityPipeline = new SimulationPipeline("Gravity Pipeline");
@@ -389,6 +403,39 @@ void SimulationManager::CreateDGPipeline()
     mPipelines.push_back(dgPipeline);
 }
 
+void SimulationManager::CreateRayTracePipeline()
+{
+    SimulationPipeline* rayTracePipeline = new SimulationPipeline("RayTrace Pipeline");
+    unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT;
+
+    ComputeShader* rayTraceComputeShader = new ComputeShader(AppUtil::Path::shader_dir("ray_tracer.comp"), mLogger);
+    std::vector<SSBOBinding> rayTraceResources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
+                                                    SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId),
+                                                    SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
+                                                    SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId)};
+    DispatchCallback rayTraceDispatchCountCallback = [this](){ return glm::ivec3(mWindowSizeCallback(), 1); };
+    UniformCallback rayTraceTextureCallback = mBindTextureBuffer; // not direct into pass uniform vector for clarity
+    UniformCallback rayTraceCameraCallback = mBindCameraUniformCallback; // same
+    UniformCallback rayTraceSkyboxCallback = [this](Shader* _shader){ BindCallback(_shader, "skybox", 0); };
+    UniformCallback rayTraceRefObjectsCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
+    UniformCallback rayTraceLSpeedCallback = [this](Shader* _shader){ BindCallback(_shader, "C", Math::Constants::LightSpeed); };
+    UniformCallback rayTraceCconstCallback = [this](Shader* _shader){ BindCallback(_shader, "G", Math::Constants::GravitationalConstant); };
+    UniformCallback rayTraceCellSizeCallback = [this](Shader* _shader){ BindCallback(_shader, "cellSize", gCellSize); };
+    UniformCallback rayTraceParticleRadiusCallback = [this](Shader* _shader){ BindCallback(_shader, "particleRadius", gParticleRadius); };
+    UniformCallback rayTraceGridSizeCallback = [this](Shader* _shader){ BindCallback(_shader, "gridSize", gGridSize); };
+    UniformCallback rayTraceGridMinCallback = [this](Shader* _shader){ BindCallback(_shader, "gridMin", gGridBoundsMin); };
+    UniformCallback rayTraceGridMaxCallback = [this](Shader* _shader){ BindCallback(_shader, "gridMax", gGridBoundsMax); };
+    UniformCallback rayTraceNeighbourRadiusCallback = [this](Shader* _shader){ BindCallback(_shader, "neighborRadius", gNeighborRadius); };
+    std::vector<UniformCallback> rayTraceUniforms = {rayTraceTextureCallback, rayTraceCameraCallback, rayTraceSkyboxCallback, 
+                                                        rayTraceRefObjectsCallback, rayTraceLSpeedCallback, rayTraceCconstCallback, 
+                                                        rayTraceCellSizeCallback, rayTraceParticleRadiusCallback, rayTraceGridSizeCallback, 
+                                                        rayTraceGridMinCallback, rayTraceGridMaxCallback, rayTraceNeighbourRadiusCallback};
+    SimulationPass* raytracePass = new SimulationPass(rayTraceComputeShader, rayTraceResources, rayTraceDispatchCountCallback, rayTraceUniforms, passFlag);
+    rayTracePipeline->AddPass(raytracePass);
+
+    mPipelines.push_back(rayTracePipeline);
+}
+
 void SimulationManager::CreateBitonicSortPass(SimulationPipeline* _pipeline, GPUBuffer<HashEntry>& _gridBuffer)
 {
     unsigned int passFlag = GL_SHADER_STORAGE_BARRIER_BIT;
@@ -525,14 +572,6 @@ void  SimulationManager::BindSPHSmoothingRadius(class Shader* _shader)
 {
     _shader->use();
     _shader->setFloat("smoothingRadius", gSmoothingRadius);
-}
-
-std::vector<SSBOBinding> SimulationManager::GetRaytracerResources()
-{
-    return {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId),
-            SSBOBinding(mRenderGridBuffer.mBindingLocation, mRenderGridBuffer.mId),
-            SSBOBinding(mRenderCellStartBuffer.mBindingLocation, mRenderCellStartBuffer.mId),
-            SSBOBinding(mRenderCellEndBuffer.mBindingLocation, mRenderCellEndBuffer.mId)};
 }
 
 void SimulationManager::BindCustomExecuet_BitonicSort(class SimulationPass* _pass, glm::ivec3 _count, glm::ivec3 _groups)
