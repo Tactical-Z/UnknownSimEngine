@@ -17,6 +17,8 @@ public:
     void EndFrame();
     void Shutdown();
 
+    void ResetSimulation(unsigned int _numParticles);
+
     void BindBuffer(GLint _bufferID, int _layout);
     
     class BlackHole* GetBlackHoleRefObject();
@@ -26,7 +28,7 @@ public:
     void SetGetWindowSizeCallback(CallbackiVec2Null _cb);
     void SetBindTextureRaytracerCallback(UniformCallback _cb);
     void SetBindCameraUniformCallback(UniformCallback _cb);
-
+    uint32_t GetNumActiveParticles();
 private:
     // --- Util ---
     class Logger* mLogger = nullptr;

@@ -9,9 +9,9 @@
 // Particle Data
 // -----------------------------
 // cellSize >= smoothingRadius
-#define NUM_PARTICLE_MAX 1000
-constexpr float gParticleRadius = 0.5f;
-constexpr float gSmoothingRadius = 2.5f;
+static unsigned int gNumParticles = 1000;
+static float gParticleRadius = 0.5f;
+static float gSmoothingRadius = 2.5f;
 
 struct Particle{
     glm::vec3 mPosition;

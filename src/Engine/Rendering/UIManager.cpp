@@ -64,7 +64,7 @@ void UIManager::BindRayTraceTextureBuffer()
     if(!mDisplayTexture || !mSkyboxTexture)
         return;
 
-    // TODO: put texture type inside bind funcion, no reason to be out here.
+    // TODO: put texture type inside bind function, no reason to be out here.
     mDisplayTexture->Bind(0, TextureType::TT_IMAGE2D);
     mSkyboxTexture->Bind(0, TextureType::TT_SAMPLERCUBE);
 }
@@ -309,7 +309,7 @@ void UIManager::Section_Camera_Transform(const ImVec2& _spacing, Camera* _cam)
     ImGui::SetNextItemWidth(mItemWidth_Camera_Transform);
     ImGui::DragFloat("##RX", &currentPitch);
     ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0, 1, 0, 1), "Yaw ");
+    ImGui::TextColored(ImVec4(0, 1, 0, 1), "Yaw");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(mItemWidth_Camera_Transform);
     ImGui::DragFloat("##RY", &currentYaw);
@@ -328,12 +328,14 @@ void UIManager::UI_SimulationData()
         return;
     }
 
-    float spacingx = ImGui::GetContentRegionAvail().x * mAppData_sectionWidth_scale;
-    float spacingy = ImGui::GetContentRegionAvail().y * mAppData_sectionHeight_scale;
+    float spacingx = ImGui::GetContentRegionAvail().x;
+    float spacingy = ImGui::GetContentRegionAvail().y;
     ImVec2 spacing = ImVec2(spacingx, spacingy);
     Section_SimulationData_TimeControls(spacing);
+    Section_SimulationData_SimulationControls(spacing);
 
     // TODO: decide result for this, not relly necesary??
+    ImGui::Separator();
     ImGui::Text("Simulation compute time");
     std::vector<std::pair<const char*, float>> passTime = mPassTimeCallback();
     bool firstPipeline = true;
@@ -391,6 +393,25 @@ void UIManager::Section_SimulationData_TimeControls(const ImVec2& _spacing)
             }
         }
         ImGui::DragFloat("##RY", &simSpeed, 0.1);
+    }
+}
+
+void UIManager::Section_SimulationData_SimulationControls(const ImVec2& _spacing)
+{
+    if(!mGetNumActiveParticles || !mUpdateSimulationWithNewParticles)
+        return;
+    if(mFirstFrame_SimData_Controls){
+        mFirstFrame_SimData_Controls = false;
+        mNumParticlesDisplayed_SimData_SimControl = mGetNumActiveParticles();
+    }
+    
+    uint32_t numCurrentParticles = mGetNumActiveParticles();
+    ImGui::Text("Number of Simulated Particles: %i", numCurrentParticles);
+    ImGui::SetNextItemWidth(_spacing.x / 3);
+    ImGui::InputScalar("##", ImGuiDataType_U32, &mNumParticlesDisplayed_SimData_SimControl);
+    ImGui::SameLine();
+    if(ImGui::Button("Update Simulation")){
+        mUpdateSimulationWithNewParticles(mNumParticlesDisplayed_SimData_SimControl);
     }
 }
 
@@ -643,6 +664,16 @@ void UIManager::SetGetSimulationSpeedRefrenceCallback(CallbackFloatRefNull _call
 void UIManager::SetGetPassTimeCallback(CallbackVecPairCCharFloatNull _callback)
 {
     mPassTimeCallback = _callback;
+}
+
+void UIManager::SetGetNumActiveParticlesCallback(CallbackFloatNull _callback)
+{
+    mGetNumActiveParticles = _callback;
+}
+
+void UIManager::SetUpdateSimulationWithNewParticlesCallback(CallbackVoidInt _callback)
+{
+    mUpdateSimulationWithNewParticles = _callback;
 }
 
 void UIManager::ToggleBool(bool* _b)

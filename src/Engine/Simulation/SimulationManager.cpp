@@ -88,6 +88,15 @@ void SimulationManager::Shutdown()
     mRenderCellEndBuffer.mId = 0;
 }
 
+void SimulationManager::ResetSimulation(unsigned int _numParticles)
+{
+    Shutdown();
+
+    gNumParticles = _numParticles; 
+    InitBuffers();
+    GeneratePipelines();
+}
+
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
 {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _layout, _bufferID);
@@ -96,14 +105,14 @@ void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
 void SimulationManager::InitBuffers()
 {
     mParticleBuffer.mBindingLocation = BindingLocation::BL_PARTICLE_BUFFER;
-    mParticleBuffer.mActiveCount = NUM_PARTICLE_MAX;
-    mParticleBuffer.mTotalCount = NUM_PARTICLE_MAX;
+    mParticleBuffer.mActiveCount = gNumParticles;
+    mParticleBuffer.mTotalCount = gNumParticles;
     mParticleBuffer.mBufferData.resize(mParticleBuffer.mTotalCount);
     GenerateAccretionDiskParticles();
     mParticleBuffer.Generate();
 
     mHashBuffer.mBindingLocation = BindingLocation::BL_HASH_ENTRY_BUFFER;
-    mHashBuffer.mActiveCount = NUM_PARTICLE_MAX;
+    mHashBuffer.mActiveCount = gNumParticles;
     mHashBuffer.mTotalCount = std::bit_ceil(mHashBuffer.mActiveCount); // increase to nearest powert of two for bitonic sort
     mHashBuffer.mBufferData.resize(mHashBuffer.mTotalCount);
     for(uint32_t i = 0; i < mHashBuffer.mTotalCount; i++)
@@ -285,6 +294,11 @@ void SimulationManager::SetBindTextureRaytracerCallback(UniformCallback _cb)
 void SimulationManager::SetBindCameraUniformCallback(UniformCallback _cb)
 {
     mBindCameraUniformCallback = _cb;
+}
+
+uint32_t SimulationManager::GetNumActiveParticles()
+{
+    return gNumParticles;
 }
 
 void SimulationManager::CreateGravityPipeline()

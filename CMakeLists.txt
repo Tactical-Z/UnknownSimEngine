@@ -25,7 +25,6 @@ set(SOURCES
     src/engine/Camera.cpp
     src/engine/Objects.cpp
     src/engine/rendering/UIManager.cpp
-    src/engine/rendering/Renderer.cpp
     src/engine/rendering/Texture.cpp
     src/engine/simulation/SimulationManager.cpp
     src/engine/simulation/SimulationPipeline.cpp
@@ -52,7 +51,6 @@ set(HEADERS
     src/engine/Camera.h
     src/engine/Objects.h
     src/engine/rendering/UIManager.h
-    src/engine/rendering/Renderer.h
     src/engine/rendering/Texture.h
     src/engine/simulation/SimulationManager.h
     src/engine/simulation/SimulationPipeline.h

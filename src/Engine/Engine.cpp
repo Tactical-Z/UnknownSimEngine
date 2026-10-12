@@ -31,9 +31,6 @@ void Engine::Init()
     mSimulationManager.SetBindTextureRaytracerCallback([this](const Shader* _shader) {mUIManager.BindRayTraceTextureBuffer();});
     mSimulationManager.SetBindCameraUniformCallback([this](const Shader* _shader) {mCamera->BindCamera(_shader);});
     mSimulationManager.GeneratePipelines();
-
-    // Renderer 
-    //mRenderer.Init(loggerRef, clockRef, mSimulationManager.GetRaytracerResources(), mCamera, &mObjects);
     // UI
     mUIManager.Init(mWindowManager.GetGLFWWindowPtr(), loggerRef, clockRef);
     mUIManager.SetExitCallback([this](){ SetShouldRun(false); });
@@ -41,6 +38,8 @@ void Engine::Init()
     mUIManager.SetGetCameraReferenceCallback([this](){ return mCamera; });
     mUIManager.SetGetSimulationSpeedRefrenceCallback([this]() -> float& { return mSimulationManager.GetSimulationSpeedRef();});
     mUIManager.SetGetPassTimeCallback([this]() -> std::vector<std::pair<const char*, float>> { return mSimulationManager.GetSimulationUIData();});
+    mUIManager.SetGetNumActiveParticlesCallback([this]() -> float { return mSimulationManager.GetNumActiveParticles();});
+    mUIManager.SetUpdateSimulationWithNewParticlesCallback([this](int _n){ mSimulationManager.ResetSimulation(_n);});
 }
 
 void Engine::StartFrame()
@@ -48,7 +47,6 @@ void Engine::StartFrame()
     GetClockRef()->Update();
     mWindowManager.StartFrame(); // First
     mSimulationManager.StartFrame();
-    //mRenderer.StartFrame();
     mUIManager.StartFrame();
 }
 
@@ -57,7 +55,6 @@ void Engine::Update()
     float dt = GetClockRef()->GetDeltaTime();
     mWindowManager.Update(dt);
     mSimulationManager.Update(dt);
-    //mRenderer.Update(dt);
     mUIManager.Update(dt);
 }
 
@@ -65,14 +62,12 @@ void Engine::Render()
 {
     mWindowManager.Render();
     mSimulationManager.Render();
-    //mRenderer.Render();
     mUIManager.Render(); // not uidraw()
 }
 
 void Engine::EndFrame()
 {
     mUIManager.EndFrame();
-    //mRenderer.EndFrame();
     mSimulationManager.EndFrame();
     mWindowManager.EndFrame(); // Last
 }
@@ -82,7 +77,6 @@ void Engine::Shutdown()
     // managers
     mWindowManager.Shutdown();
     mSimulationManager.Shutdown();
-    //mRenderer.Shutdown();
     mUIManager.Shutdown();
 
     // Other

@@ -26,6 +26,8 @@ public:
     void SetGetCameraReferenceCallback(CallbackCameraRefNull _callback);
     void SetGetSimulationSpeedRefrenceCallback(CallbackFloatRefNull _callback);
     void SetGetPassTimeCallback(CallbackVecPairCCharFloatNull _callback);
+    void SetGetNumActiveParticlesCallback(CallbackFloatNull _callback);
+    void SetUpdateSimulationWithNewParticlesCallback(CallbackVoidInt _callback);
 
 private:
     // Util
@@ -41,8 +43,10 @@ private:
     CallbackCameraRefNull mGetCameraRefCallback;
     CallbackFloatRefNull mGetSimulationSpeedRefCallback;
     CallbackVecPairCCharFloatNull mPassTimeCallback;
+    CallbackFloatNull mGetNumActiveParticles;
+    CallbackVoidInt mUpdateSimulationWithNewParticles;
     
-    // Funcitions
+    // Functions
     void ResizeDisplayTexture();
     void InitImGui(struct GLFWwindow* _window);
     void ShutdownImGui();
@@ -74,14 +78,17 @@ private:
     void UI_SimulationData();
     float mOriginalSimSpeed_SimData_TimeControls = 0.f;
     void Section_SimulationData_TimeControls(const ImVec2& _spacing);
-
+    uint32_t mNumParticlesDisplayed_SimData_SimControl = 0;
+    bool mFirstFrame_SimData_Controls = true;
+    void Section_SimulationData_SimulationControls(const ImVec2& _spacing);
+    
     // App Data //
     const char* mName_Window_AppData = "App data";
     bool mEnable_Window_AppData = true;
     float mAppData_sectionWidth_scale = 0.10f;
     float mAppData_sectionHeight_scale = 1.0f;
     void UI_AppData();
-    static constexpr int RamMemory_HistorySize = 120; // num smaples
+    static constexpr int RamMemory_HistorySize = 120; // num samples
     static constexpr float RamMemory_SampleInterval = 0.25f; // in seconds
     static constexpr float RamMemory_HistoryInSeconds = RamMemory_HistorySize * RamMemory_SampleInterval; // seconds of history
     float RamMemory_History[RamMemory_HistorySize] = {};

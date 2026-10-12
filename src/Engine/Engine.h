@@ -2,7 +2,6 @@
 
 #include "engine/EngineConfig.h"
 #include "engine/WindowManager.h"
-#include "engine/Rendering/Renderer.h"
 #include "engine/Rendering/UIManager.h"
 #include "engine/Simulation/SimulationManager.h"
 
@@ -38,7 +37,6 @@ private:
     // App
     WindowManager mWindowManager;
     SimulationManager mSimulationManager;
-    Renderer mRenderer;
     UIManager mUIManager;
 
     std::vector<class Object*> mObjects;
