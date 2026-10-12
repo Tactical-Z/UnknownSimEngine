@@ -12,9 +12,11 @@ void SimulationManager::Init(const std::vector<class Object*>& _referenceObjects
     mLogger = _logger;
     mClock = _clock;
     mReferenceObjectsRef = &_referenceObjects;
-
     InitBuffers();
+}
 
+void SimulationManager::GeneratePipelines()
+{
     CreateGravityPipeline();
     CreateSHGPipeline();
     CreateSPHPipeline();
@@ -57,10 +59,33 @@ void SimulationManager::Shutdown()
     mParticleBuffer.mId = 0;
     glDeleteBuffers(1, &mHashBuffer.mId);
     mHashBuffer.mId = 0;
+    glDeleteBuffers(1, &mCellFlagBuffer.mId);
+    mCellFlagBuffer.mId = 0;
+    glDeleteBuffers(1, &mCellPrefixBuffer.mId);
+    mCellPrefixBuffer.mId = 0;
+    glDeleteBuffers(1, &mCellCountBuffer.mId);
+    mCellCountBuffer.mId = 0;
     glDeleteBuffers(1, &mCellStartBuffer.mId);
     mCellStartBuffer.mId = 0;
     glDeleteBuffers(1, &mCellEndBuffer.mId);
     mCellEndBuffer.mId = 0;
+    glDeleteBuffers(1, &mUniqueHashBuffer.mId);
+    mUniqueHashBuffer.mId = 0;
+    glDeleteBuffers(1, &mHashLookupBuffer.mId);
+    mHashLookupBuffer.mId = 0;
+
+    glDeleteBuffers(1, &mRenderGridBuffer.mId);
+    mRenderGridBuffer.mId = 0;
+    glDeleteBuffers(1, &mRenderCellFlagBuffer.mId);
+    mRenderCellFlagBuffer.mId = 0;
+    glDeleteBuffers(1, &mRenderCellPrefixBuffer.mId);
+    mRenderCellPrefixBuffer.mId = 0;
+    glDeleteBuffers(1, &mRenderCellCountBuffer.mId);
+    mRenderCellCountBuffer.mId = 0;
+    glDeleteBuffers(1, &mRenderCellStartBuffer.mId);
+    mRenderCellStartBuffer.mId = 0;
+    glDeleteBuffers(1, &mRenderCellEndBuffer.mId);
+    mRenderCellEndBuffer.mId = 0;
 }
 
 void SimulationManager::BindBuffer(GLint _bufferID, int _layout)
@@ -270,7 +295,7 @@ void SimulationManager::CreateGravityPipeline()
     ComputeShader* gravityComputeShader = new ComputeShader(AppUtil::Path::shader_dir("accretionDiskGravSolver.comp"), mLogger);
     std::vector<SSBOBinding> resources = {SSBOBinding(mParticleBuffer.mBindingLocation, mParticleBuffer.mId)};
     DispatchCallback DispatchCountCallback = [this](){ return glm::ivec3(mParticleBuffer.mActiveCount,0,0); };
-    UniformCallback RefObjCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
+    UniformCallback RefObjCallback = [this](Shader* _shader){ BindBhCallback(_shader); };
     UniformCallback dtCallback = [this](Shader* _shader){ BindDTCallback(_shader); };
     UniformCallback GCallback = [this](Shader* _shader){ BindGCallback(_shader); };
     std::vector<UniformCallback> uniforms = {RefObjCallback, dtCallback, GCallback};
@@ -417,7 +442,7 @@ void SimulationManager::CreateRayTracePipeline()
     UniformCallback rayTraceTextureCallback = mBindTextureBuffer; // not direct into pass uniform vector for clarity
     UniformCallback rayTraceCameraCallback = mBindCameraUniformCallback; // same
     UniformCallback rayTraceSkyboxCallback = [this](Shader* _shader){ BindCallback(_shader, "skybox", 0); };
-    UniformCallback rayTraceRefObjectsCallback = [this](Shader* _shader){ BindRefObjCallback(_shader); };
+    UniformCallback rayTraceRefObjectsCallback = [this](Shader* _shader){ BindBhCallback(_shader); };
     UniformCallback rayTraceLSpeedCallback = [this](Shader* _shader){ BindCallback(_shader, "C", Math::Constants::LightSpeed); };
     UniformCallback rayTraceCconstCallback = [this](Shader* _shader){ BindCallback(_shader, "G", Math::Constants::GravitationalConstant); };
     UniformCallback rayTraceCellSizeCallback = [this](Shader* _shader){ BindCallback(_shader, "cellSize", gCellSize); };
@@ -551,14 +576,14 @@ void SimulationManager::BindActiveCountCallback(class Shader* _shader)
     _shader->setInt("activeCount", mParticleBuffer.mActiveCount);
 }
 
-void SimulationManager::BindRefObjCallback(class Shader* _shader)
+void SimulationManager::BindBhCallback(class Shader* _shader)
 {
     BlackHole* bh = GetBlackHoleRefObject();
     if(bh){
         _shader->use();
-        _shader->setVec3("refObj.position", bh->GetPosition());
-        _shader->setFloat("refObj.radius", bh->GetRadius());
-        _shader->setFloat("refObj.mass", bh->GetMass());
+        _shader->setVec3("bh.position", bh->GetPosition());
+        _shader->setFloat("bh.radius", bh->GetRadius());
+        _shader->setFloat("bh.mass", bh->GetMass());
     }
 }
 

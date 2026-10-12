@@ -17,8 +17,7 @@ void UIManager::Init(GLFWwindow* _window, Logger* _logger, Clock* _clock)
     mClock = _clock;
 
     mSkyboxTexture = new Texture(AppUtil::Path::skybox_files("skybox/blue/"));
-    mDisplayTexture = new Texture(935, 685);
-    //mDisplayTexture = new Texture(AppUtil::Path::asset_dir("images.png"));
+    mDisplayTexture = new Texture(mViewport_RenderArea.x, mViewport_RenderArea.y);
     InitImGui(_window);
 }
 
@@ -31,7 +30,7 @@ void UIManager::StartFrame()
 
 void UIManager::Update(const float& _dt)
 {
-
+    ResizeDisplayTexture();
 }
 
 void UIManager::Render()
@@ -66,13 +65,24 @@ void UIManager::BindRayTraceTextureBuffer()
         return;
 
     // TODO: put texture type inside bind funcion, no reason to be out here.
-    //mDisplayTexture->Bind(0, TextureType::TT_IMAGE2D);
-    //mSkyboxTexture->Bind(0, TextureType::TT_SAMPLERCUBE);
+    mDisplayTexture->Bind(0, TextureType::TT_IMAGE2D);
+    mSkyboxTexture->Bind(0, TextureType::TT_SAMPLERCUBE);
 }
 
 glm::ivec2 UIManager::GetRenderSize()
 {
     return glm::ivec2(mViewport_RenderArea.x, mViewport_RenderArea.y);
+}
+
+void UIManager::ResizeDisplayTexture()
+{
+    if(mViewport_RenderArea.x != mViewport_Current_RenderArea.x || 
+        mViewport_RenderArea.y != mViewport_Current_RenderArea.y)
+    {
+        delete mDisplayTexture;
+        mDisplayTexture = new Texture(mViewport_RenderArea.x, mViewport_RenderArea.y);
+        mViewport_Current_RenderArea = mViewport_RenderArea;
+    }
 }
 
 void UIManager::InitImGui(GLFWwindow* _window)
@@ -235,8 +245,12 @@ void UIManager::UI_Viewport()
     float spacingy = ImGui::GetContentRegionAvail().y;
     ImVec2 spacing = ImVec2(spacingx, spacingy);
     mViewport_RenderArea = spacing;
+
+    // Sets the texture and inverts it for glfw
+	ImVec2 uv0 = ImVec2(0.0f, 1.0f); // Top-left
+	ImVec2 uv1 = ImVec2(1.0f, 0.0f); // Bottom-right
     if(mDisplayTexture)
-        ImGui::Image((void*)(intptr_t)mDisplayTexture->mID, mViewport_RenderArea);
+        ImGui::Image((void*)(intptr_t)mDisplayTexture->mID, mViewport_RenderArea, uv0, uv1);
 
     ImGui::End();
 }

@@ -10,6 +10,7 @@ public:
     ~SimulationManager() = default;
 
     void Init(const std::vector<class Object*>& _referenceObjects, class Logger* _logger, class Clock* _clock);
+    void GeneratePipelines();
     void StartFrame();
     void Update(const float& _dt);
     void Render();
@@ -36,7 +37,6 @@ private:
     UniformCallback mBindTextureBuffer;
     UniformCallback mBindCameraUniformCallback;
 
-
     // --- GPU buffers ---
     GPUBuffer<Particle> mParticleBuffer;
     
@@ -58,7 +58,6 @@ private:
     GPUBuffer<uint32_t> mRenderCellStartBuffer;
     GPUBuffer<uint32_t> mRenderCellEndBuffer;
     
-
     void InitBuffers();
   
     // Debug--
@@ -126,7 +125,7 @@ private:
     void BindGCallback(class Shader* _shader);
     void BindSCallback(class Shader* _shader);
     void BindActiveCountCallback(class Shader* _shader);
-    void BindRefObjCallback(class Shader* _shader);  
+    void BindBhCallback(class Shader* _shader);  
     void BindCellSizeCallback(class Shader* _shader);
     void BindSPHSmoothingRadius(class Shader* _shader);
 

@@ -19,7 +19,7 @@ struct RefObj{
     float radius;
     float mass;
 };
-uniform RefObj refObj;
+uniform RefObj bh;
 uniform float dt;
 uniform int G;
 
@@ -36,12 +36,12 @@ bool WithinBounds(int _id, int _count){
 
 vec3 GravitationalAcceleration(int _index)
 {
-    vec3 dir = refObj.position - particles[_index].position;
+    vec3 dir = bh.position - particles[_index].position;
     float dist = length(dir);
 
     // F = G * ((m1 * m2) / r^2)   &    F = m1 * a   ->   a = G * (m2/r^2)
     // Where dir is the direction of the acceleration (toward the reference object)
-    float acceleration = G * refObj.mass / (dist * dist);
+    float acceleration = G * bh.mass / (dist * dist);
     return normalize(dir) * acceleration;
 }
 

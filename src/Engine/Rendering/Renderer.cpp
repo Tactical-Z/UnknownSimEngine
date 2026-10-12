@@ -94,15 +94,15 @@ void Renderer::InitShaders(std::vector<SSBOBinding> _raytracerResources)
 
 void Renderer::InitTextures()
 {
-    mSkyboxTexture = new Texture(AppUtil::Path::skybox_files("skybox/blue/"));
-    GenerateDisplayTexture();
+    // mSkyboxTexture = new Texture(AppUtil::Path::skybox_files("skybox/blue/"));
+    // GenerateDisplayTexture();
 }
 
 void Renderer::GenerateDisplayTexture()
 {
-    delete mDisplayTexture;
-    mDisplayTexture = nullptr;
-    mDisplayTexture = new Texture(mWindowSize.x, mWindowSize.y);
+    // delete mDisplayTexture;
+    // mDisplayTexture = nullptr;
+    // mDisplayTexture = new Texture(mWindowSize.x, mWindowSize.y);
 }
 
 // void Renderer::BindCamera(const Shader* _shader)

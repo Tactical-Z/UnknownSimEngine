@@ -30,6 +30,7 @@ void Engine::Init()
     mSimulationManager.SetGetWindowSizeCallback([this]() -> glm::ivec2 {return mUIManager.GetRenderSize();});
     mSimulationManager.SetBindTextureRaytracerCallback([this](const Shader* _shader) {mUIManager.BindRayTraceTextureBuffer();});
     mSimulationManager.SetBindCameraUniformCallback([this](const Shader* _shader) {mCamera->BindCamera(_shader);});
+    mSimulationManager.GeneratePipelines();
 
     // Renderer 
     //mRenderer.Init(loggerRef, clockRef, mSimulationManager.GetRaytracerResources(), mCamera, &mObjects);

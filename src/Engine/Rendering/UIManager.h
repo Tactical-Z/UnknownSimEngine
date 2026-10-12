@@ -43,6 +43,7 @@ private:
     CallbackVecPairCCharFloatNull mPassTimeCallback;
     
     // Funcitions
+    void ResizeDisplayTexture();
     void InitImGui(struct GLFWwindow* _window);
     void ShutdownImGui();
     
@@ -55,7 +56,8 @@ private:
     // Viewport //
     const char* mName_Window_Viewport = "Viewport";
     bool mEnable_Window_Viewport = true;
-    ImVec2 mViewport_RenderArea = ImVec2(0.f, 0.f);
+    ImVec2 mViewport_RenderArea = ImVec2(0, 0);
+    ImVec2 mViewport_Current_RenderArea = ImVec2(0,0);
     class Texture* mDisplayTexture = nullptr;
     void UI_Viewport();
 
